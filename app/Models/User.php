@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -70,6 +71,18 @@ class User extends Authenticatable implements FilamentUser
     public function defaultPaymentMethod(): ?UserPaymentMethod
     {
         return $this->paymentMethods()->default()->first();
+    }
+
+    /** @return BelongsToMany<Project, $this> */
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class);
+    }
+
+    public function defaultProject(): Project
+    {
+        return $this->projects()->where('is_active', true)->first()
+            ?? Project::query()->where('name', 'Remote Raven')->firstOrFail();
     }
 
     /** @return HasMany<Expense, $this> */

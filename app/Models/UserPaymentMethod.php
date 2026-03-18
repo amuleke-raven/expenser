@@ -31,6 +31,18 @@ class UserPaymentMethod extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (UserPaymentMethod $method): void {
+            if ($method->is_default) {
+                static::query()
+                    ->where('user_id', $method->user_id)
+                    ->where('id', '!=', $method->id ?? 0)
+                    ->update(['is_default' => false]);
+            }
+        });
+    }
+
     /** @param Builder<UserPaymentMethod> $query */
     public function scopeDefault(Builder $query): void
     {

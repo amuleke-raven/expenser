@@ -14,6 +14,8 @@ class DatabaseSeeder extends Seeder
             TagSeeder::class,
             RuleSeeder::class,
             WorkflowSeeder::class,
+            ProjectSeeder::class,
+            SupportedPaymentMethodSeeder::class,
             UserSeeder::class,
         ]);
     }

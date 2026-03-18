@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Users\RelationManagers;
 
 use App\Enums\PaymentMethodType;
+use App\Models\SupportedPaymentMethod;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -12,6 +13,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -26,12 +28,19 @@ class PaymentMethodsRelationManager extends RelationManager
         return $schema
             ->components([
                 Select::make('type')
-                    ->options(collect(PaymentMethodType::cases())->mapWithKeys(fn (PaymentMethodType $t) => [$t->value => $t->label()]))
-                    ->required(),
+                    ->options(
+                        SupportedPaymentMethod::query()
+                            ->active()
+                            ->get()
+                            ->mapWithKeys(fn (SupportedPaymentMethod $m) => [$m->type->value => $m->type->label()])
+                    )
+                    ->required()
+                    ->live(),
                 TextInput::make('label')
                     ->required()
                     ->maxLength(255),
                 Toggle::make('is_default'),
+                ...$this->detailFieldComponents(),
             ]);
     }
 
@@ -63,5 +72,22 @@ class PaymentMethodsRelationManager extends RelationManager
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /** @return array<int, TextInput> */
+    private function detailFieldComponents(): array
+    {
+        $components = [];
+
+        foreach (PaymentMethodType::cases() as $type) {
+            foreach ($type->detailFields() as $field) {
+                $components[] = TextInput::make("details.{$field['key']}")
+                    ->label($field['label'])
+                    ->required($field['required'])
+                    ->visible(fn (Get $get): bool => $get('type') === $type->value);
+            }
+        }
+
+        return $components;
     }
 }

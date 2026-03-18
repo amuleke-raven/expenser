@@ -9,6 +9,7 @@ use App\Services\ExpenseSubmissionService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
@@ -44,6 +45,8 @@ class ExpensesTable
             ])
             ->recordActions([
                 ViewAction::make(),
+                EditAction::make()
+                    ->visible(fn (Expense $record): bool => $record->isDraft()),
                 Action::make('submit')
                     ->label('Submit')
                     ->color('success')

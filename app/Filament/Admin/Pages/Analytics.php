@@ -14,7 +14,9 @@ class Analytics extends Page
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static ?string $navigationLabel = 'Analytics';
+    protected static ?string $navigationLabel = 'Summary';
+
+    protected static \UnitEnum|string|null $navigationGroup = 'Reports';
 
     public function getWidgets(): array
     {

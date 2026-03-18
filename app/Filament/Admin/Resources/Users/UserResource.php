@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\Users\Pages\CreateUser;
 use App\Filament\Admin\Resources\Users\Pages\EditUser;
 use App\Filament\Admin\Resources\Users\Pages\ListUsers;
 use App\Filament\Admin\Resources\Users\RelationManagers\PaymentMethodsRelationManager;
+use App\Filament\Admin\Resources\Users\RelationManagers\ProjectsRelationManager;
 use App\Filament\Admin\Resources\Users\Schemas\UserForm;
 use App\Filament\Admin\Resources\Users\Tables\UsersTable;
 use App\Models\User;
@@ -21,6 +22,8 @@ class UserResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
     public static function form(Schema $schema): Schema
     {
         return UserForm::configure($schema);
@@ -35,6 +38,7 @@ class UserResource extends Resource
     {
         return [
             PaymentMethodsRelationManager::class,
+            ProjectsRelationManager::class,
         ];
     }
 

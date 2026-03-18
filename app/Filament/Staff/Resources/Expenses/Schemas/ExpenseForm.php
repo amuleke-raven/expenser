@@ -12,6 +12,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class ExpenseForm
@@ -20,50 +21,55 @@ class ExpenseForm
     {
         return $schema
             ->components([
-                TextInput::make('title')
-                    ->required(),
-                Textarea::make('description')
+                Section::make('Expense Details')
+                    ->schema([
+                        TextInput::make('title')
+                            ->required(),
+                        Textarea::make('description')
+                            ->columnSpanFull(),
+                        TextInput::make('amount')
+                            ->required()
+                            ->numeric()
+                            ->minValue(0.01),
+                        Select::make('currency_id')
+                            ->label('Currency')
+                            ->options(Currency::query()->active()->pluck('code', 'id'))
+                            ->default(fn (): ?int => Currency::query()->active()->where('code', 'USD')->value('id'))
+                            ->required(),
+                        Select::make('category_id')
+                            ->label('Category')
+                            ->options(Category::query()->active()->pluck('name', 'id'))
+                            ->required(),
+                        DatePicker::make('expense_date')
+                            ->required()
+                            ->maxDate(now()),
+                        FileUpload::make('receipt_path')
+                            ->label('Receipt')
+                            ->visibility('public')
+                            ->directory('receipts'),
+                        Select::make('merchant_id')
+                            ->label('Merchant')
+                            ->options(Merchant::query()->active()->pluck('name', 'id'))
+                            ->searchable()
+                            ->nullable(),
+                        Select::make('tags')
+                            ->label('Tags')
+                            ->options(Tag::query()->active()->pluck('name', 'id'))
+                            ->multiple()
+                            ->relationship('tags', 'name')
+                            ->nullable(),
+                        Select::make('preferred_payment_method_id')
+                            ->label('Preferred Payment Method')
+                            ->options(fn (): array => UserPaymentMethod::query()
+                                ->where('user_id', auth()->id())
+                                ->pluck('label', 'id')
+                                ->toArray())
+                            ->visible(fn (): bool => UserPaymentMethod::query()
+                                ->where('user_id', auth()->id())
+                                ->count() > 1)
+                            ->nullable(),
+                    ])
                     ->columnSpanFull(),
-                TextInput::make('amount')
-                    ->required()
-                    ->numeric()
-                    ->minValue(0.01),
-                Select::make('currency_id')
-                    ->label('Currency')
-                    ->options(Currency::query()->active()->pluck('code', 'id'))
-                    ->required(),
-                Select::make('category_id')
-                    ->label('Category')
-                    ->options(Category::query()->active()->pluck('name', 'id'))
-                    ->required(),
-                DatePicker::make('expense_date')
-                    ->required()
-                    ->maxDate(now()),
-                FileUpload::make('receipt_path')
-                    ->label('Receipt')
-                    ->visibility('public')
-                    ->directory('receipts'),
-                Select::make('merchant_id')
-                    ->label('Merchant')
-                    ->options(Merchant::query()->active()->pluck('name', 'id'))
-                    ->searchable()
-                    ->nullable(),
-                Select::make('tags')
-                    ->label('Tags')
-                    ->options(Tag::query()->active()->pluck('name', 'id'))
-                    ->multiple()
-                    ->relationship('tags', 'name')
-                    ->nullable(),
-                Select::make('preferred_payment_method_id')
-                    ->label('Preferred Payment Method')
-                    ->options(fn (): array => UserPaymentMethod::query()
-                        ->where('user_id', auth()->id())
-                        ->pluck('label', 'id')
-                        ->toArray())
-                    ->visible(fn (): bool => UserPaymentMethod::query()
-                        ->where('user_id', auth()->id())
-                        ->count() > 1)
-                    ->nullable(),
             ]);
     }
 }
