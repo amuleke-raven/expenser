@@ -3,161 +3,111 @@
 namespace App\Models;
 
 use App\Enums\ExpenseStatus;
-use App\Enums\UserRole;
-use Database\Factories\ExpenseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Expense extends Model
 {
-    /** @use HasFactory<ExpenseFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'user_id',
-        'category_id',
+        'expense_type_id',
+        'project_id',
         'currency_id',
-        'merchant_id',
-        'workflow_id',
-        'preferred_payment_method_id',
-        'title',
+        'total_amount',
         'description',
-        'amount',
-        'expense_date',
-        'receipt_path',
         'status',
+        'submitted_at',
+        'approved_at',
+        'rejected_at',
         'rejection_reason',
-        'rejection_comment',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => ExpenseStatus::class,
-            'expense_date' => 'date',
-            'amount' => 'decimal:2',
+            'total_amount' => 'decimal:2',
+            'submitted_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 
-    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /** @return BelongsTo<Category, $this> */
-    public function category(): BelongsTo
+    public function expenseType(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(ExpenseType::class);
     }
 
-    /** @return BelongsTo<Currency, $this> */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
     }
 
-    /** @return BelongsTo<Merchant, $this> */
-    public function merchant(): BelongsTo
+    public function lineItems(): HasMany
     {
-        return $this->belongsTo(Merchant::class);
+        return $this->hasMany(ExpenseLineItem::class)->orderBy('sort_order');
     }
 
-    /** @return BelongsTo<Workflow, $this> */
-    public function workflow(): BelongsTo
+    public function attachments(): HasMany
     {
-        return $this->belongsTo(Workflow::class);
+        return $this->hasMany(ExpenseAttachment::class);
     }
 
-    /** @return BelongsTo<UserPaymentMethod, $this> */
-    public function preferredPaymentMethod(): BelongsTo
+    public function modelHasWorkflow(): MorphOne
     {
-        return $this->belongsTo(UserPaymentMethod::class, 'preferred_payment_method_id');
+        return $this->morphOne(ModelHasWorkflow::class, 'workflowable');
     }
 
-    /** @return BelongsToMany<Tag, $this> */
-    public function tags(): BelongsToMany
+    public function scopeForUser(Builder $query, int $userId): Builder
     {
-        return $this->belongsToMany(Tag::class);
+        return $query->where('user_id', $userId);
     }
 
-    /** @return HasMany<ExpenseWorkflowStep, $this> */
-    public function workflowSteps(): HasMany
+    public function scopeByStatus(Builder $query, ExpenseStatus $status): Builder
     {
-        return $this->hasMany(ExpenseWorkflowStep::class)->orderBy('step_order');
+        return $query->where('status', $status->value);
     }
 
-    /** @return HasOne<ExpensePayment, $this> */
-    public function payment(): HasOne
+    public function scopeSubmitted(Builder $query): Builder
     {
-        return $this->hasOne(ExpensePayment::class);
+        return $query->where('status', ExpenseStatus::Submitted->value);
     }
 
-    /** @param Builder<Expense> $query */
-    public function scopeForUser(Builder $query, int $userId): void
+    public function scopeApproved(Builder $query): Builder
     {
-        $query->where('user_id', $userId);
+        return $query->where('status', ExpenseStatus::Approved->value);
     }
 
-    /** @param Builder<Expense> $query */
-    public function scopeByStatus(Builder $query, ExpenseStatus $status): void
+    public function recalculateTotal(): void
     {
-        $query->where('status', $status->value);
+        $this->total_amount = $this->lineItems()->sum('total');
+        $this->saveQuietly();
     }
 
-    /** @param Builder<Expense> $query */
-    public function scopeAwaitingRoleApproval(Builder $query, UserRole $role): void
+    public function ref(): string
     {
-        $query->where('status', ExpenseStatus::Submitted->value)
-            ->whereHas('workflowSteps', function (Builder $q) use ($role): void {
-                $q->where('status', 'pending')
-                    ->whereHas('workflowStep', function (Builder $inner) use ($role): void {
-                        $inner->where('role', $role->value);
-                    });
-            });
+        return config('remoteraven.expense_ref_prefix').'-'.
+            str_pad((string) $this->id, config('remoteraven.ref_pad_length'), '0', STR_PAD_LEFT);
     }
 
-    public function isDraft(): bool
+    public function getRefAttribute(): string
     {
-        return $this->status === ExpenseStatus::Draft;
-    }
-
-    public function isSubmitted(): bool
-    {
-        return $this->status === ExpenseStatus::Submitted;
-    }
-
-    public function isApproved(): bool
-    {
-        return $this->status === ExpenseStatus::Approved;
-    }
-
-    public function isRejected(): bool
-    {
-        return $this->status === ExpenseStatus::Rejected;
-    }
-
-    public function isProcessing(): bool
-    {
-        return $this->status === ExpenseStatus::Processing;
-    }
-
-    public function isPaid(): bool
-    {
-        return $this->status === ExpenseStatus::Paid;
-    }
-
-    public function currentPendingWorkflowStep(): ?ExpenseWorkflowStep
-    {
-        return $this->workflowSteps()
-            ->where('status', 'pending')
-            ->orderBy('step_order')
-            ->first();
+        return $this->ref();
     }
 }

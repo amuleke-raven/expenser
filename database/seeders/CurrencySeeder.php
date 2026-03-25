@@ -10,16 +10,16 @@ class CurrencySeeder extends Seeder
     public function run(): void
     {
         $currencies = [
-            ['code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$', 'exchange_rate' => 1.000000, 'is_base' => true],
-            ['code' => 'EUR', 'name' => 'Euro', 'symbol' => '€', 'exchange_rate' => 0.920000, 'is_base' => false],
-            ['code' => 'GBP', 'name' => 'British Pound', 'symbol' => '£', 'exchange_rate' => 0.790000, 'is_base' => false],
-            ['code' => 'JPY', 'name' => 'Japanese Yen', 'symbol' => '¥', 'exchange_rate' => 149.000000, 'is_base' => false],
-            ['code' => 'CAD', 'name' => 'Canadian Dollar', 'symbol' => 'CA$', 'exchange_rate' => 1.360000, 'is_base' => false],
-            ['code' => 'AUD', 'name' => 'Australian Dollar', 'symbol' => 'A$', 'exchange_rate' => 1.520000, 'is_base' => false],
+            ['code' => 'USD', 'name' => 'US Dollar',      'symbol' => '$',  'is_base' => true,  'conversion_rate' => 1.0],
+            ['code' => 'KES', 'name' => 'Kenyan Shilling', 'symbol' => 'KSh', 'is_base' => false, 'conversion_rate' => 130.0],
+            ['code' => 'GBP', 'name' => 'British Pound',  'symbol' => '£',  'is_base' => false, 'conversion_rate' => 0.79],
+            ['code' => 'EUR', 'name' => 'Euro',            'symbol' => '€',  'is_base' => false, 'conversion_rate' => 0.92],
+            ['code' => 'AED', 'name' => 'UAE Dirham',      'symbol' => 'AED', 'is_base' => false, 'conversion_rate' => 3.67],
+            ['code' => 'INR', 'name' => 'Indian Rupee',    'symbol' => '₹',  'is_base' => false, 'conversion_rate' => 83.5],
         ];
 
         foreach ($currencies as $currency) {
-            Currency::query()->updateOrCreate(['code' => $currency['code']], array_merge($currency, ['is_active' => true]));
+            Currency::firstOrCreate(['code' => $currency['code']], $currency);
         }
     }
 }

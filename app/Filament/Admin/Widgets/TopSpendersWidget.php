@@ -5,27 +5,31 @@ namespace App\Filament\Admin\Widgets;
 use App\Models\User;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
+use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
-class TopSpendersWidget extends TableWidget
+class TopSpendersWidget extends BaseWidget
 {
-    protected static ?string $heading = 'Top Spenders';
+    protected static ?string $heading = 'Top Spenders This Month';
+
+    protected static ?int $sort = 3;
 
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => User::query()
-                ->withSum('expenses', 'amount')
-                ->orderByDesc('expenses_sum_amount')
-                ->limit(10))
+            ->query(
+                User::query()
+                    ->withCount(['expenses as expense_count' => fn (Builder $q) => $q->whereMonth('created_at', now()->month),
+                    ])
+                    ->withSum(['expenses as expense_total' => fn (Builder $q) => $q->whereMonth('created_at', now()->month),
+                    ], 'total_amount')
+                    ->orderByDesc('expense_total')
+                    ->limit(5)
+            )
             ->columns([
                 TextColumn::make('name'),
-                TextColumn::make('email'),
-                TextColumn::make('expenses_sum_amount')
-                    ->label('Total Expenses')
-                    ->numeric(decimalPlaces: 2)
-                    ->formatStateUsing(fn ($state): string => '$'.number_format((float) $state, 2)),
+                TextColumn::make('expense_count')->label('Count'),
+                TextColumn::make('expense_total')->label('Total')->money(),
             ]);
     }
 }

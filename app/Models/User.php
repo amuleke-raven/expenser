@@ -2,20 +2,21 @@
 
 namespace App\Models;
 
-use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasRoles, Notifiable;
 
     /**
      * @var list<string>
@@ -24,7 +25,10 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
-        'role',
+        'phone',
+        'country_id',
+        'currency_id',
+        'default_project_id',
     ];
 
     /**
@@ -40,60 +44,69 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => UserRole::class,
         ];
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
-        if ($panel->getId() === 'admin') {
-            return $this->role === UserRole::Admin;
-        }
-
-        return true;
+        return match ($panel->getId()) {
+            'admin' => $this->can('access_admin_panel'),
+            'staff' => $this->can('access_staff_panel'),
+            default => false,
+        };
     }
 
-    public function isAdmin(): bool
+    public function country(): BelongsTo
     {
-        return $this->role === UserRole::Admin;
+        return $this->belongsTo(Country::class);
     }
 
-    public function isFinance(): bool
+    public function currency(): BelongsTo
     {
-        return $this->role === UserRole::Finance;
+        return $this->belongsTo(Currency::class);
     }
 
-    public function isManager(): bool
+    public function defaultProject(): BelongsTo
     {
-        return $this->role === UserRole::Manager;
+        return $this->belongsTo(Project::class, 'default_project_id');
     }
 
-    public function defaultPaymentMethod(): ?UserPaymentMethod
-    {
-        return $this->paymentMethods()->default()->first();
-    }
-
-    /** @return BelongsToMany<Project, $this> */
     public function projects(): BelongsToMany
     {
-        return $this->belongsToMany(Project::class);
+        return $this->belongsToMany(Project::class, 'user_projects');
     }
 
-    public function defaultProject(): Project
+    public function paymentMethods(): BelongsToMany
     {
-        return $this->projects()->where('is_active', true)->first()
-            ?? Project::query()->where('name', 'Remote Raven')->firstOrFail();
+        return $this->belongsToMany(PaymentMethod::class, 'user_payment_methods')
+            ->withPivot('is_preferred');
     }
 
-    /** @return HasMany<Expense, $this> */
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);
     }
 
-    /** @return HasMany<UserPaymentMethod, $this> */
-    public function paymentMethods(): HasMany
+    public function initiatedRewards(): HasMany
     {
-        return $this->hasMany(UserPaymentMethod::class);
+        return $this->hasMany(Reward::class, 'initiated_by');
+    }
+
+    public function preferredPaymentMethod(): ?PaymentMethod
+    {
+        return $this->paymentMethods()->wherePivot('is_preferred', true)->first()
+               ?? $this->paymentMethods()->first();
+    }
+
+    public function toUsd(float $localAmount): float
+    {
+        $direction = config('remoteraven.conversion_rate_direction', 'per_base');
+        $rate = (float) ($this->currency?->conversion_rate ?? 1);
+
+        if ($direction === 'per_base') {
+            return $rate > 0 ? $localAmount / $rate : $localAmount;
+        }
+
+        return $localAmount * $rate;
     }
 }

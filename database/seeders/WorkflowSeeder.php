@@ -2,33 +2,49 @@
 
 namespace Database\Seeders;
 
-use App\Enums\UserRole;
+use App\Enums\StepActionType;
+use App\Models\ExpenseType;
 use App\Models\Workflow;
+use App\Models\WorkflowStep;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
 
 class WorkflowSeeder extends Seeder
 {
     public function run(): void
     {
-        $workflow = Workflow::query()->updateOrCreate(
-            ['name' => 'Default Approval Workflow'],
+        $managerRole = Role::findByName('manager');
+        $adminRole = Role::findByName('admin');
+
+        $workflow = Workflow::firstOrCreate(
+            ['name' => 'Standard Approval'],
+            ['description' => 'Two-step approval: Manager then Admin']
+        );
+
+        WorkflowStep::firstOrCreate(
+            ['workflow_id' => $workflow->id, 'order' => 1],
             [
-                'description' => 'Standard two-step approval workflow',
-                'is_default' => true,
-                'is_active' => true,
+                'name' => 'Manager Review',
+                'action_type' => StepActionType::Approval,
+                'role_id' => $managerRole->id,
             ]
         );
 
-        $steps = [
-            ['order' => 1, 'name' => 'Manager Review', 'role' => UserRole::Manager->value],
-            ['order' => 2, 'name' => 'Finance Approval', 'role' => UserRole::Finance->value],
-        ];
+        WorkflowStep::firstOrCreate(
+            ['workflow_id' => $workflow->id, 'order' => 2],
+            [
+                'name' => 'Admin Sign-off',
+                'action_type' => StepActionType::Approval,
+                'role_id' => $adminRole->id,
+            ]
+        );
 
-        foreach ($steps as $step) {
-            $workflow->steps()->updateOrCreate(
-                ['order' => $step['order']],
-                $step
-            );
-        }
+        // Assign workflow to Travel and Accommodation expense types
+        ExpenseType::whereIn('name', ['Travel', 'Accommodation'])->each(function ($type) use ($workflow) {
+            $type->update([
+                'workflow_id' => $workflow->id,
+                'requires_approval' => true,
+            ]);
+        });
     }
 }

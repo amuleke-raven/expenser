@@ -2,39 +2,47 @@
 
 namespace App\Models;
 
-use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Project extends Model
 {
-    /** @use HasFactory<ProjectFactory> */
     use HasFactory;
 
     protected $fillable = [
         'name',
-        'description',
+        'client_name',
         'is_active',
+        'is_default',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'is_default' => 'boolean',
         ];
     }
 
-    /** @param Builder<Project> $query */
-    public function scopeActive(Builder $query): void
+    public function scopeActive(Builder $query): Builder
     {
-        $query->where('is_active', true);
+        return $query->where('is_active', true);
     }
 
-    /** @return BelongsToMany<User, $this> */
-    public function users(): BelongsToMany
+    public function scopeDefault(Builder $query): Builder
     {
-        return $this->belongsToMany(User::class);
+        return $query->where('is_default', true);
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class, 'default_project_id');
+    }
+
+    public function userProjects(): HasMany
+    {
+        return $this->hasMany(UserProject::class);
     }
 }

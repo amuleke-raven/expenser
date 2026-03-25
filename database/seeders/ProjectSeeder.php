@@ -9,9 +9,14 @@ class ProjectSeeder extends Seeder
 {
     public function run(): void
     {
-        Project::updateOrCreate(
+        Project::firstOrCreate(
             ['name' => 'Remote Raven'],
-            ['description' => 'Default project for unassigned users.', 'is_active' => true],
+            ['is_default' => true, 'is_active' => true, 'client_name' => null]
+        );
+
+        Project::firstOrCreate(
+            ['name' => 'Client Alpha'],
+            ['is_default' => false, 'is_active' => true, 'client_name' => 'Alpha Corp']
         );
     }
 }
