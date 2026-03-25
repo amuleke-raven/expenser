@@ -58,13 +58,14 @@ COPY . .
 # Copy built frontend assets
 COPY --from=frontend /app/public/build public/build
 
-# Install PHP dependencies (production only)
+# Install PHP dependencies (production only, skip scripts that require .env)
 RUN composer install \
     --no-dev \
     --optimize-autoloader \
     --no-interaction \
     --no-progress \
-    --prefer-dist
+    --prefer-dist \
+    --no-scripts
 
 # Set up storage and bootstrap/cache directories
 RUN mkdir -p \

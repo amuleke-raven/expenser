@@ -4,10 +4,7 @@ node_modules
 vendor
 public/build
 public/hot
-storage/logs/*.log
-storage/framework/cache/*
-storage/framework/sessions/*
-storage/framework/views/*
+storage/
 bootstrap/cache/*.php
 database/database.sqlite
 .env
