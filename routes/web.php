@@ -3,5 +3,9 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    if (auth()->check()) {
+        return redirect()->route('filament.staff.pages.dashboard');
+    }
+
+    return redirect()->route('filament.staff.auth.login');
 });
