@@ -14,6 +14,7 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
+//use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -27,6 +28,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Schemas\Components\Section;
 
 class ExpenseResource extends Resource
 {
@@ -46,7 +48,9 @@ class ExpenseResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Select::make('expense_type_id')
+            Section::make()
+            ->schema([
+                Select::make('expense_type_id')
                 ->label('Expense Type')
                 ->options(
                     ExpenseType::query()
@@ -83,6 +87,12 @@ class ExpenseResource extends Resource
             Repeater::make('lineItems')
                 ->relationship('lineItems')
                 ->label('Line Items')
+                ->table([
+                    Repeater\TableColumn::make('Title'),
+                    Repeater\TableColumn::make('Qty'),
+                    Repeater\TableColumn::make('Unit Price'),
+                    Repeater\TableColumn::make('Total'),
+                ])
                 ->schema([
                     TextInput::make('description')->required()->maxLength(255),
 
@@ -113,7 +123,7 @@ class ExpenseResource extends Resource
                         ->hidden(),
                 ])
                 ->minItems(1)
-                ->addActionLabel('Add Line Item')
+                ->addActionLabel('Add Item')
                 ->columnSpanFull(),
 
             FileUpload::make('attachment_files')
@@ -127,6 +137,9 @@ class ExpenseResource extends Resource
                 ->visible(fn (Get $get): bool => (bool) ExpenseType::find($get('expense_type_id'))?->requires_attachment
                 )
                 ->columnSpanFull(),
+            ])->columnSpanFull()
+
+
         ]);
     }
 
