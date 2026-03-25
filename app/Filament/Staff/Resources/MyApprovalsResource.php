@@ -6,6 +6,7 @@ use App\Enums\StepActionStatus;
 use App\Filament\Staff\Resources\MyApprovalsResource\Pages;
 use App\Models\Expense;
 use App\Models\Reward;
+use App\Models\WorkflowStep;
 use App\Models\WorkflowStepAction;
 use App\Services\WorkflowEngine;
 use Filament\Actions\Action;
@@ -27,6 +28,17 @@ class MyApprovalsResource extends Resource
     protected static ?string $modelLabel = 'Pending Approval';
 
     protected static ?string $pluralModelLabel = 'Pending Approvals';
+
+    public static function canAccess(): bool
+    {
+        $userRoleIds = auth()->user()?->roles->pluck('id') ?? collect();
+
+        if ($userRoleIds->isEmpty()) {
+            return false;
+        }
+
+        return WorkflowStep::whereIn('role_id', $userRoleIds)->exists();
+    }
 
     public static function getEloquentQuery(): Builder
     {
