@@ -3,6 +3,7 @@
 namespace App\Filament\Staff\Pages;
 
 use App\Enums\RecipientStatus;
+use App\Enums\RewardStatus;
 use App\Models\RewardRecipient;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
@@ -26,6 +27,7 @@ class MyRewardsPage extends Page implements HasTable
             ->query(
                 RewardRecipient::query()
                     ->where('user_id', auth()->id())
+                    ->whereHas('reward', fn ($q) => $q->where('status', RewardStatus::Approved)->orWhere('status', RewardStatus::Paid))
                     ->with(['reward.rewardType', 'reward.currency'])
             )
             ->defaultSort('created_at', 'desc')
