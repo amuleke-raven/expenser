@@ -52,8 +52,13 @@ class RewardResource extends Resource
                 ->afterStateUpdated(function ($state, $set) {
                     if ($state) {
                         $type = RewardType::find($state);
-                        if ($type?->is_fixed && $type->fixed_amount) {
-                            $set('amount', $type->fixed_amount);
+                        if ($type?->is_fixed) {
+                            if ($type->fixed_amount) {
+                                $set('amount', $type->fixed_amount);
+                            }
+                            if ($type->fixed_currency_id) {
+                                $set('currency_id', $type->fixed_currency_id);
+                            }
                         }
                     }
                 }),
@@ -66,9 +71,11 @@ class RewardResource extends Resource
             Select::make('currency_id')
                 ->label('Currency')
                 ->options(Currency::query()->pluck('code', 'id'))
-                ->default(fn () => Currency::base()->first()?->id)
+                ->default(fn () => Currency::where('code', 'USD')->first()?->id)
                 ->required()
-                ->searchable(),
+                ->searchable()
+                ->disabled(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->is_fixed)
+                ->dehydrated(),
 
             Select::make('project_id')
                 ->label('Project')

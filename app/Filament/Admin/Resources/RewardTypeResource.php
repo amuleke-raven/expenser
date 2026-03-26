@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\RewardTypeResource\Pages;
 use App\Filament\Admin\Resources\RewardTypeResource\RelationManagers\RewardRulesRelationManager;
+use App\Models\Currency;
 use App\Models\RewardType;
 use App\Models\Workflow;
 use Filament\Forms\Components\Select;
@@ -42,6 +43,14 @@ class RewardTypeResource extends Resource
                 ->nullable()
                 ->visible(fn (Get $get): bool => (bool) $get('is_fixed'))
                 ->label('Fixed Amount'),
+
+            Select::make('fixed_currency_id')
+                ->label('Fixed Currency')
+                ->options(Currency::query()->pluck('code', 'id'))
+                ->default(fn () => Currency::where('code', 'USD')->value('id'))
+                ->searchable()
+                ->nullable()
+                ->visible(fn (Get $get): bool => (bool) $get('is_fixed')),
             Toggle::make('is_client_based')->label('Client Based'),
             Toggle::make('requires_approval')->label('Requires Approval')->live(),
             Select::make('workflow_id')

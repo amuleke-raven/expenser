@@ -17,6 +17,7 @@ class RewardType extends Model
         'is_fixed',
         'is_client_based',
         'fixed_amount',
+        'fixed_currency_id',
         'requires_approval',
         'workflow_id',
     ];
@@ -39,6 +40,11 @@ class RewardType extends Model
     public function rules(): HasMany
     {
         return $this->hasMany(RewardRule::class);
+    }
+
+    public function fixedCurrency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class, 'fixed_currency_id');
     }
 
     public function workflow(): BelongsTo
