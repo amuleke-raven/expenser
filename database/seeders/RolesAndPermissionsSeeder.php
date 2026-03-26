@@ -18,6 +18,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_expenses',
             'approve_expenses',
             'manage_rewards',
+            'approve_rewards',
             'manage_workflows',
             'manage_payments',
             'view_reports',

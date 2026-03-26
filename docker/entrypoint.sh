@@ -23,11 +23,11 @@ fi
 php artisan migrate --force
 
 # Seed database on first run (idempotent — all seeders use firstOrCreate)
-USER_COUNT=$(php artisan tinker --execute "echo \App\Models\User::count();" 2>/dev/null | tail -1)
-if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
+#USER_COUNT=$(php artisan tinker --execute "echo \App\Models\User::count();" 2>/dev/null | tail -1)
+#if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
     echo "Seeding database..."
     php artisan db:seed --force
-fi
+#fi
 
 # Create public storage symlink for file uploads
 php artisan storage:link --force
