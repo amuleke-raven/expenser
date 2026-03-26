@@ -183,10 +183,10 @@ class ExpensesSheet implements FromCollection, WithColumnWidths, WithEvents, Wit
             $query->where('currency_id', $this->filters['currency_id']);
         }
         if (! empty($this->filters['status'])) {
-            $query->whereHas('payable', fn ($q) => $q->where('status', $this->filters['status']));
+            $query->whereHasMorph('payable', [Expense::class], fn ($q) => $q->where('status', $this->filters['status']));
         }
         if (! empty($this->filters['project_id'])) {
-            $query->whereHas('payable', fn ($q) => $q->where('project_id', $this->filters['project_id']));
+            $query->whereHasMorph('payable', [Expense::class], fn ($q) => $q->where('project_id', $this->filters['project_id']));
         }
     }
 }
