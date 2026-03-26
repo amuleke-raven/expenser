@@ -160,6 +160,7 @@ class RewardResource extends Resource
                 Action::make('add_recipients')
                     ->label('Add Recipients')
                     ->icon('heroicon-o-user-plus')
+                    ->visible(fn (Reward $record): bool => $record->status !== RewardStatus::Rejected)
                     ->form([
                         Select::make('user_ids')
                             ->label('Select Recipients')
