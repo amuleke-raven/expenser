@@ -16,6 +16,7 @@ use App\Models\RewardType;
 use App\Models\User;
 use App\Services\WorkflowEngine;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -25,6 +26,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class RewardResource extends Resource
 {
@@ -43,48 +45,54 @@ class RewardResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Select::make('reward_type_id')
-                ->label('Reward Type')
-                ->options(RewardType::query()->pluck('name', 'id'))
-                ->required()
-                ->searchable()
-                ->live()
-                ->afterStateUpdated(function ($state, $set) {
-                    if ($state) {
-                        $type = RewardType::find($state);
-                        if ($type?->is_fixed) {
-                            if ($type->fixed_amount) {
-                                $set('amount', $type->fixed_amount);
+            Section::make('Reward Details')
+                ->schema([
+                    Select::make('reward_type_id')
+                        ->label('Reward Type')
+                        ->options(RewardType::query()->pluck('name', 'id'))
+                        ->required()
+                        ->searchable()
+                        ->live()
+                        ->afterStateUpdated(function ($state, $set) {
+                            if ($state) {
+                                $type = RewardType::find($state);
+                                if ($type?->is_fixed) {
+                                    if ($type->fixed_amount) {
+                                        $set('amount', $type->fixed_amount);
+                                    }
+                                    if ($type->fixed_currency_id) {
+                                        $set('currency_id', $type->fixed_currency_id);
+                                    }
+                                }
                             }
-                            if ($type->fixed_currency_id) {
-                                $set('currency_id', $type->fixed_currency_id);
-                            }
-                        }
-                    }
-                }),
+                        }),
 
-            TextInput::make('amount')
-                ->numeric()
-                ->required()
-                ->disabledOn('edit'),
+                    TextInput::make('amount')
+                        ->numeric()
+                        ->required()
+                        ->disabledOn('edit'),
 
-            Select::make('currency_id')
-                ->label('Currency')
-                ->options(Currency::query()->pluck('code', 'id'))
-                ->default(fn () => Currency::where('code', 'USD')->first()?->id)
-                ->required()
-                ->searchable()
-                ->disabled(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->is_fixed)
-                ->dehydrated(),
+                    Select::make('currency_id')
+                        ->label('Currency')
+                        ->options(Currency::query()->pluck('code', 'id'))
+                        ->default(fn () => Currency::where('code', 'USD')->first()?->id)
+                        ->required()
+                        ->searchable()
+                        ->disabled(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->is_fixed)
+                        ->dehydrated(),
 
-            Select::make('project_id')
-                ->label('Project')
-                ->options(Project::query()->pluck('name', 'id'))
-                ->searchable()
-                ->nullable()
-                ->visible(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->is_client_based),
+                    Select::make('project_id')
+                        ->label('Project')
+                        ->options(Project::query()->pluck('name', 'id'))
+                        ->searchable()
+                        ->nullable(),
 
-            Textarea::make('notes')->nullable()->columnSpanFull(),
+                    DatePicker::make('payout_date')
+                        ->label('Payout Date')
+                        ->nullable(),
+
+                    Textarea::make('notes')->nullable()->columnSpanFull(),
+                ])->columnSpanFull(),
         ]);
     }
 
@@ -102,6 +110,10 @@ class RewardResource extends Resource
                     ->badge()
                     ->color(fn (RewardStatus $state): string => $state->color()),
                 TextColumn::make('project.name')->label('Project'),
+                TextColumn::make('payout_date')
+                    ->label('Payout Date')
+                    ->date()
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -122,13 +134,15 @@ class RewardResource extends Resource
 
                         return self::userCanApproveReward($record);
                     })
-                    ->action(function (Reward $record) {
+                    ->action(function (Reward $record, $livewire) {
                         $mhw = $record->modelHasWorkflow()->with('workflow.steps')->first();
                         $action = $mhw?->stepActions()->where('status', StepActionStatus::Pending)->first();
 
                         if ($action) {
                             app(WorkflowEngine::class)->advance($action, StepActionStatus::Approved, null, auth()->user());
                         }
+
+                        $livewire->resetTable();
                     }),
 
                 Action::make('reject')
@@ -147,7 +161,7 @@ class RewardResource extends Resource
                             ->required()
                             ->label('Rejection Reason'),
                     ])
-                    ->action(function (Reward $record, array $data) {
+                    ->action(function (Reward $record, array $data, $livewire) {
                         $mhw = $record->modelHasWorkflow()->with('workflow.steps')->first();
                         $action = $mhw?->stepActions()->where('status', StepActionStatus::Pending)->first();
 
@@ -155,6 +169,8 @@ class RewardResource extends Resource
                             $record->update(['rejection_reason' => $data['rejection_reason']]);
                             app(WorkflowEngine::class)->advance($action, StepActionStatus::Rejected, $data['rejection_reason'], auth()->user());
                         }
+
+                        $livewire->resetTable();
                     }),
 
                 Action::make('add_recipients')

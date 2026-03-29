@@ -9,17 +9,19 @@ use App\Models\Expense;
 use App\Models\ExpenseType;
 use App\Services\ExpenseRuleEngine;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
-//use Filament\Forms\Components\Repeater\TableColumn;
+// use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
@@ -28,7 +30,6 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Schemas\Components\Section;
 
 class ExpenseResource extends Resource
 {
@@ -49,96 +50,95 @@ class ExpenseResource extends Resource
     {
         return $schema->schema([
             Section::make()
-            ->schema([
-                Select::make('expense_type_id')
-                ->label('Expense Type')
-                ->options(
-                    ExpenseType::query()
-                        ->whereHas('expenseGroup.roles', fn ($q) => $q->whereIn('id', auth()->user()->roles->pluck('id'))
-                        )
-                        ->with('expenseGroup')
-                        ->get()
-                        ->mapWithKeys(fn ($type) => [$type->id => "{$type->expenseGroup->name} — {$type->name}"])
-                )
-                ->required()
-                ->searchable()
-                ->live()
-                ->afterStateUpdated(function ($state, Set $set) {
-                    // Reset attachment requirement when type changes
-                }),
-
-            Select::make('project_id')
-                ->label('Project')
-                ->options(fn () => auth()->user()->projects()->pluck('name', 'projects.id'))
-                ->searchable()
-                ->nullable(),
-
-            Select::make('currency_id')
-                ->label('Currency')
-                ->options(Currency::query()->pluck('code', 'id'))
-                ->default(fn () => auth()->user()->currency_id)
-                ->required()
-                ->searchable(),
-
-            Textarea::make('description')
-                ->nullable()
-                ->columnSpanFull(),
-
-            Repeater::make('lineItems')
-                ->relationship('lineItems')
-                ->label('Line Items')
-                ->table([
-                    Repeater\TableColumn::make('Title'),
-                    Repeater\TableColumn::make('Qty'),
-                    Repeater\TableColumn::make('Unit Price'),
-                    Repeater\TableColumn::make('Total'),
-                ])
                 ->schema([
-                    TextInput::make('description')->required()->maxLength(255),
-
-                    TextInput::make('quantity')
-                        ->numeric()
-                        ->default(1)
+                    Select::make('expense_type_id')
+                        ->label('Expense Type')
+                        ->options(
+                            ExpenseType::query()
+                                ->whereHas('expenseGroup.roles', fn ($q) => $q->whereIn('id', auth()->user()->roles->pluck('id'))
+                                )
+                                ->with('expenseGroup')
+                                ->get()
+                                ->mapWithKeys(fn ($type) => [$type->id => "{$type->expenseGroup->name} — {$type->name}"])
+                        )
                         ->required()
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(fn (Get $get, Set $set) => $set('total', (float) $get('quantity') * (float) $get('unit_price'))
-                        ),
+                        ->searchable()
+                        ->live()
+                        ->afterStateUpdated(function ($state, Set $set) {
+                            // Reset attachment requirement when type changes
+                        }),
 
-                    TextInput::make('unit_price')
-                        ->numeric()
+                    Select::make('project_id')
+                        ->label('Project')
+                        ->options(fn () => auth()->user()->projects()->pluck('name', 'projects.id'))
+                        ->searchable()
+                        ->nullable(),
+
+                    Select::make('currency_id')
+                        ->label('Currency')
+                        ->options(Currency::query()->pluck('code', 'id'))
+                        ->default(fn () => auth()->user()->currency_id)
                         ->required()
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(fn (Get $get, Set $set) => $set('total', (float) $get('quantity') * (float) $get('unit_price'))
-                        ),
+                        ->searchable(),
 
-                    TextInput::make('total')
-                        ->numeric()
-                        ->disabled()
-                        ->dehydrated()
-                        ->label('Total'),
+                    Textarea::make('description')
+                        ->nullable()
+                        ->columnSpanFull(),
 
-                    TextInput::make('sort_order')
-                        ->numeric()
-                        ->default(0)
-                        ->hidden(),
-                ])
-                ->minItems(1)
-                ->addActionLabel('Add Item')
-                ->columnSpanFull(),
+                    Repeater::make('lineItems')
+                        ->relationship('lineItems')
+                        ->label('Line Items')
+                        ->table([
+                            Repeater\TableColumn::make('Title'),
+                            Repeater\TableColumn::make('Qty'),
+                            Repeater\TableColumn::make('Unit Price'),
+                            Repeater\TableColumn::make('Total'),
+                        ])
+                        ->schema([
+                            TextInput::make('description')->required()->maxLength(255),
 
-            FileUpload::make('attachment_files')
-                ->label('Attachments')
-                ->multiple()
-                ->acceptedFileTypes(config('remoteraven.supported_attachment_mimes'))
-                ->maxSize(config('remoteraven.max_attachment_size_mb') * 1024)
-                ->visibility('public')
-                ->disk('public')
-                ->directory('expense-attachments')
-                ->visible(fn (Get $get): bool => (bool) ExpenseType::find($get('expense_type_id'))?->requires_attachment
-                )
-                ->columnSpanFull(),
-            ])->columnSpanFull()
+                            TextInput::make('quantity')
+                                ->numeric()
+                                ->default(1)
+                                ->required()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => $set('total', (float) $get('quantity') * (float) $get('unit_price'))
+                                ),
 
+                            TextInput::make('unit_price')
+                                ->numeric()
+                                ->required()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => $set('total', (float) $get('quantity') * (float) $get('unit_price'))
+                                ),
+
+                            TextInput::make('total')
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated()
+                                ->label('Total'),
+
+                            TextInput::make('sort_order')
+                                ->numeric()
+                                ->default(0)
+                                ->hidden(),
+                        ])
+                        ->minItems(1)
+                        ->addActionLabel('Add Item')
+                        ->columnSpanFull(),
+
+                    FileUpload::make('attachment_files')
+                        ->label('Attachments')
+                        ->multiple()
+                        ->acceptedFileTypes(config('remoteraven.supported_attachment_mimes'))
+                        ->maxSize(config('remoteraven.max_attachment_size_mb') * 1024)
+                        ->visibility('public')
+                        ->disk('public')
+                        ->directory('expense-attachments')
+                        ->visible(fn (Get $get): bool => (bool) ExpenseType::find($get('expense_type_id'))?->requires_attachment
+                        )
+                        ->columnSpanFull(),
+                ])->columnSpanFull(),
 
         ]);
     }
@@ -214,6 +214,8 @@ class ExpenseResource extends Resource
 
                 ViewAction::make(),
                 EditAction::make()
+                    ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::Draft),
+                DeleteAction::make()
                     ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::Draft),
             ]);
     }

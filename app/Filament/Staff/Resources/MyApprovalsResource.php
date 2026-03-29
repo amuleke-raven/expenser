@@ -116,7 +116,7 @@ class MyApprovalsResource extends Resource
                     ->form([
                         Textarea::make('notes')->nullable()->label('Notes'),
                     ])
-                    ->action(function (WorkflowStepAction $record, array $data) {
+                    ->action(function (WorkflowStepAction $record, array $data, $livewire) {
                         app(WorkflowEngine::class)->advance(
                             $record,
                             StepActionStatus::Approved,
@@ -125,6 +125,8 @@ class MyApprovalsResource extends Resource
                         );
 
                         Notification::make()->title('Approved')->success()->send();
+
+                        $livewire->resetTable();
                     }),
 
                 Action::make('reject')
@@ -136,7 +138,7 @@ class MyApprovalsResource extends Resource
                             ->required()
                             ->label('Rejection Reason'),
                     ])
-                    ->action(function (WorkflowStepAction $record, array $data) {
+                    ->action(function (WorkflowStepAction $record, array $data, $livewire) {
                         app(WorkflowEngine::class)->advance(
                             $record,
                             StepActionStatus::Rejected,
@@ -145,6 +147,8 @@ class MyApprovalsResource extends Resource
                         );
 
                         Notification::make()->title('Rejected')->warning()->send();
+
+                        $livewire->resetTable();
                     }),
             ]);
     }

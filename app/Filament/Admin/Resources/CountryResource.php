@@ -9,6 +9,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class CountryResource extends Resource
 {
@@ -26,15 +27,19 @@ class CountryResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([
-            TextInput::make('name')
-                ->required()
-                ->maxLength(255),
 
-            TextInput::make('iso_code')
-                ->required()
-                ->maxLength(2)
-                ->label('ISO Code'),
+        return $schema->schema([
+            Section::make('Country Details')
+                ->schema([
+                    TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
+
+                    TextInput::make('iso_code')
+                        ->required()
+                        ->maxLength(2)
+                        ->label('ISO Code'),
+                ])->columnSpanFull(),
         ]);
     }
 

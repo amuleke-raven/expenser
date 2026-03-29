@@ -20,6 +20,7 @@ class Reward extends Model
         'amount',
         'currency_id',
         'notes',
+        'payout_date',
         'status',
         'approved_at',
         'rejected_at',
@@ -31,6 +32,7 @@ class Reward extends Model
         return [
             'status' => RewardStatus::class,
             'amount' => 'decimal:2',
+            'payout_date' => 'date',
             'approved_at' => 'datetime',
             'rejected_at' => 'datetime',
         ];

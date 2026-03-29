@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class RewardTypeResource extends Resource
 {
@@ -35,30 +36,33 @@ class RewardTypeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('name')->required()->maxLength(255),
-            Textarea::make('description')->nullable()->columnSpanFull(),
-            Toggle::make('is_fixed')->label('Fixed Amount')->live(),
-            TextInput::make('fixed_amount')
-                ->numeric()
-                ->nullable()
-                ->visible(fn (Get $get): bool => (bool) $get('is_fixed'))
-                ->label('Fixed Amount'),
+            Section::make('Reward Type Details')
+                ->schema([
+                    TextInput::make('name')->required()->maxLength(255),
+                    Textarea::make('description')->nullable()->columnSpanFull(),
+                    Toggle::make('is_fixed')->label('Fixed Amount')->live(),
+                    TextInput::make('fixed_amount')
+                        ->numeric()
+                        ->nullable()
+                        ->visible(fn (Get $get): bool => (bool) $get('is_fixed'))
+                        ->label('Fixed Amount'),
 
-            Select::make('fixed_currency_id')
-                ->label('Fixed Currency')
-                ->options(Currency::query()->pluck('code', 'id'))
-                ->default(fn () => Currency::where('code', 'USD')->value('id'))
-                ->searchable()
-                ->nullable()
-                ->visible(fn (Get $get): bool => (bool) $get('is_fixed')),
-            Toggle::make('is_client_based')->label('Client Based'),
-            Toggle::make('requires_approval')->label('Requires Approval')->live(),
-            Select::make('workflow_id')
-                ->label('Workflow')
-                ->options(Workflow::query()->pluck('name', 'id'))
-                ->searchable()
-                ->nullable()
-                ->visible(fn (Get $get): bool => (bool) $get('requires_approval')),
+                    Select::make('fixed_currency_id')
+                        ->label('Fixed Currency')
+                        ->options(Currency::query()->pluck('code', 'id'))
+                        ->default(fn () => Currency::where('code', 'USD')->value('id'))
+                        ->searchable()
+                        ->nullable()
+                        ->visible(fn (Get $get): bool => (bool) $get('is_fixed')),
+                    Toggle::make('is_client_based')->label('Client Based'),
+                    Toggle::make('requires_approval')->label('Requires Approval')->live(),
+                    Select::make('workflow_id')
+                        ->label('Workflow')
+                        ->options(Workflow::query()->pluck('name', 'id'))
+                        ->searchable()
+                        ->nullable()
+                        ->visible(fn (Get $get): bool => (bool) $get('requires_approval')),
+            ])->columnSpanFull(),
         ]);
     }
 

@@ -11,6 +11,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class CurrencyResource extends Resource
 {
@@ -29,27 +30,30 @@ class CurrencyResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('code')
-                ->required()
-                ->maxLength(3)
-                ->label('Code'),
+            Section::make('Currency Details')
+                ->schema([
+                    TextInput::make('code')
+                        ->required()
+                        ->maxLength(3)
+                        ->label('Code'),
 
-            TextInput::make('name')
-                ->required()
-                ->maxLength(255),
+                    TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
 
-            TextInput::make('symbol')
-                ->required()
-                ->maxLength(10),
+                    TextInput::make('symbol')
+                        ->required()
+                        ->maxLength(10),
 
-            TextInput::make('conversion_rate')
-                ->required()
-                ->numeric()
-                ->label('Conversion Rate'),
+                    TextInput::make('conversion_rate')
+                        ->required()
+                        ->numeric()
+                        ->label('Conversion Rate'),
 
-            Toggle::make('is_base')
-                ->label('Is Base Currency')
-                ->helperText('Only one currency can be the base'),
+                    Toggle::make('is_base')
+                        ->label('Is Base Currency')
+                        ->helperText('Only one currency can be the base'),
+                ])->columnSpanFull(),
         ]);
     }
 

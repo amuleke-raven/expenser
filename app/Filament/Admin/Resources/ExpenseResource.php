@@ -21,6 +21,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Spatie\Permission\Models\Role;
+use Filament\Schemas\Components\Section;
 
 class ExpenseResource extends Resource
 {
@@ -130,13 +131,15 @@ class ExpenseResource extends Resource
 
                         return self::userCanActOnCurrentStep($record);
                     })
-                    ->action(function (Expense $record) {
+                    ->action(function (Expense $record, $livewire) {
                         $mhw = $record->modelHasWorkflow()->with('workflow.steps')->first();
                         $action = $mhw?->stepActions()->where('status', StepActionStatus::Pending)->first();
 
                         if ($action) {
                             app(WorkflowEngine::class)->advance($action, StepActionStatus::Approved, null, auth()->user());
                         }
+
+                        $livewire->resetTable();
                     }),
 
                 Action::make('reject')
@@ -155,7 +158,7 @@ class ExpenseResource extends Resource
                             ->required()
                             ->label('Rejection Reason'),
                     ])
-                    ->action(function (Expense $record, array $data) {
+                    ->action(function (Expense $record, array $data, $livewire) {
                         $mhw = $record->modelHasWorkflow()->with('workflow.steps')->first();
                         $action = $mhw?->stepActions()->where('status', StepActionStatus::Pending)->first();
 
@@ -163,6 +166,8 @@ class ExpenseResource extends Resource
                             $record->update(['rejection_reason' => $data['rejection_reason']]);
                             app(WorkflowEngine::class)->advance($action, StepActionStatus::Rejected, $data['rejection_reason'], auth()->user());
                         }
+
+                        $livewire->resetTable();
                     }),
 
                 ViewAction::make(),

@@ -15,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class ExpenseGroupResource extends Resource
 {
@@ -33,16 +34,19 @@ class ExpenseGroupResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('name')
-                ->required()
-                ->maxLength(255),
+            Section::make('Expense Group Details')
+                ->schema([
+                    TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
 
-            Textarea::make('description')
-                ->nullable()
-                ->columnSpanFull(),
+                    Textarea::make('description')
+                        ->nullable()
+                        ->columnSpanFull(),
 
-            Toggle::make('is_default')
-                ->label('Default Group'),
+                    Toggle::make('is_default')
+                        ->label('Default Group'),
+                ])->columnSpanFull(),
         ]);
     }
 

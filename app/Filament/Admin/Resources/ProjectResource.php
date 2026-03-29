@@ -12,6 +12,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class ProjectResource extends Resource
 {
@@ -30,19 +31,22 @@ class ProjectResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('name')
-                ->required()
-                ->maxLength(255),
+            Section::make('Project Details')
+                ->schema([
+                    TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
 
-            TextInput::make('client_name')
-                ->nullable()
-                ->maxLength(255),
+                    TextInput::make('client_name')
+                        ->nullable()
+                        ->maxLength(255),
 
-            Toggle::make('is_active')
-                ->label('Active'),
+                    Toggle::make('is_active')
+                        ->label('Active'),
 
-            Toggle::make('is_default')
-                ->label('Default Project'),
+                    Toggle::make('is_default')
+                        ->label('Default Project'),
+                ])->columnSpanFull(),
         ]);
     }
 

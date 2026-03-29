@@ -15,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class PaymentMethodResource extends Resource
 {
@@ -33,27 +34,30 @@ class PaymentMethodResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('name')
-                ->required()
-                ->maxLength(255),
+            Section::make('Payment Method Details')
+                ->schema([
+                    TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
 
-            Select::make('type')
-                ->options(collect(PaymentMethodType::cases())->mapWithKeys(
-                    fn ($case) => [$case->value => $case->label()]
-                ))
-                ->required(),
+                Select::make('type')
+                    ->options(collect(PaymentMethodType::cases())->mapWithKeys(
+                        fn ($case) => [$case->value => $case->label()]
+                    ))
+                    ->required(),
 
-            Toggle::make('is_global')
-                ->label('Available Globally')
-                ->live()
-                ->default(true),
+                Toggle::make('is_global')
+                    ->label('Available Globally')
+                    ->live()
+                    ->default(true),
 
-            Select::make('country_id')
-                ->label('Country')
-                ->options(Country::query()->pluck('name', 'id'))
-                ->searchable()
-                ->visible(fn (Get $get): bool => ! $get('is_global'))
-                ->nullable(),
+                Select::make('country_id')
+                    ->label('Country')
+                    ->options(Country::query()->pluck('name', 'id'))
+                    ->searchable()
+                    ->visible(fn (Get $get): bool => ! $get('is_global'))
+                    ->nullable(),
+            ])->columnSpanFull(),
         ]);
     }
 

@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class ExpenseTypeResource extends Resource
 {
@@ -35,33 +36,36 @@ class ExpenseTypeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('name')
-                ->required()
-                ->maxLength(255),
+            Section::make('Expense Type Details')
+                ->schema([
+                    TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
 
-            Textarea::make('description')
-                ->nullable()
-                ->columnSpanFull(),
+                    Textarea::make('description')
+                        ->nullable()
+                        ->columnSpanFull(),
 
-            Select::make('expense_group_id')
-                ->label('Expense Group')
-                ->options(ExpenseGroup::query()->pluck('name', 'id'))
-                ->required()
-                ->searchable(),
+                    Select::make('expense_group_id')
+                        ->label('Expense Group')
+                        ->options(ExpenseGroup::query()->pluck('name', 'id'))
+                        ->required()
+                        ->searchable(),
 
-            Toggle::make('requires_approval')
-                ->label('Requires Approval')
-                ->live(),
+                    Toggle::make('requires_approval')
+                        ->label('Requires Approval')
+                        ->live(),
 
-            Toggle::make('requires_attachment')
-                ->label('Requires Attachment'),
+                    Toggle::make('requires_attachment')
+                        ->label('Requires Attachment'),
 
-            Select::make('workflow_id')
-                ->label('Workflow')
-                ->options(Workflow::query()->pluck('name', 'id'))
-                ->searchable()
-                ->nullable()
-                ->visible(fn (Get $get): bool => (bool) $get('requires_approval')),
+                    Select::make('workflow_id')
+                        ->label('Workflow')
+                        ->options(Workflow::query()->pluck('name', 'id'))
+                        ->searchable()
+                        ->nullable()
+                        ->visible(fn (Get $get): bool => (bool) $get('requires_approval')),
+            ])->columnSpanFull(),
         ]);
     }
 

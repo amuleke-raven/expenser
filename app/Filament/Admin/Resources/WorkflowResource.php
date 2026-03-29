@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class WorkflowResource extends Resource
 {
@@ -29,13 +30,16 @@ class WorkflowResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('name')
-                ->required()
-                ->maxLength(255),
+            Section::make('Workflow Details')
+                ->schema([
+                    TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
 
-            Textarea::make('description')
-                ->nullable()
-                ->columnSpanFull(),
+                    Textarea::make('description')
+                        ->nullable()
+                        ->columnSpanFull(),
+                ])->columnSpanFull(),
         ]);
     }
 

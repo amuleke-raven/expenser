@@ -18,6 +18,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Schemas\Components\Section;
 
 class PendingPaymentResource extends Resource
 {
@@ -38,7 +39,11 @@ class PendingPaymentResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([]);
+        return $schema->schema([
+            Section::make('Pending Payment Details')
+                ->schema([])
+                ->columnSpanFull(),
+        ]);
     }
 
     public static function table(Table $table): Table
