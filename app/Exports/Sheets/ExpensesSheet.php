@@ -188,5 +188,8 @@ class ExpensesSheet implements FromCollection, WithColumnWidths, WithEvents, Wit
         if (! empty($this->filters['project_id'])) {
             $query->whereHasMorph('payable', [Expense::class], fn ($q) => $q->where('project_id', $this->filters['project_id']));
         }
+        if (! empty($this->filters['payment_method_type'])) {
+            $query->whereHas('paymentMethod', fn ($q) => $q->where('type', $this->filters['payment_method_type']));
+        }
     }
 }

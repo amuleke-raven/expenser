@@ -131,5 +131,11 @@ class RewardsSheet implements FromCollection, WithColumnWidths, WithHeadings, Wi
         if (! empty($this->filters['project_id'])) {
             $query->whereHas('payable.reward', fn ($q) => $q->where('project_id', $this->filters['project_id']));
         }
+        if (! empty($this->filters['status'])) {
+            $query->whereHas('payable.reward', fn ($q) => $q->where('status', $this->filters['status']));
+        }
+        if (! empty($this->filters['payment_method_type'])) {
+            $query->whereHas('paymentMethod', fn ($q) => $q->where('type', $this->filters['payment_method_type']));
+        }
     }
 }

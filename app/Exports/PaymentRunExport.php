@@ -12,9 +12,16 @@ class PaymentRunExport implements WithMultipleSheets
 
     public function sheets(): array
     {
-        return [
-            new ExpensesSheet($this->filters),
-            new RewardsSheet($this->filters),
-        ];
+        $sheets = [];
+
+        if ($this->filters['include_expenses'] ?? true) {
+            $sheets[] = new ExpensesSheet($this->filters);
+        }
+
+        if ($this->filters['include_rewards'] ?? true) {
+            $sheets[] = new RewardsSheet($this->filters);
+        }
+
+        return $sheets;
     }
 }
