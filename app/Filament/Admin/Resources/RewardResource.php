@@ -186,7 +186,7 @@ class RewardResource extends Resource
                 Action::make('add_recipients')
                     ->label('Add Recipients')
                     ->icon('heroicon-o-user-plus')
-                    ->visible(fn (Reward $record): bool => $record->status !== RewardStatus::Rejected)
+                    ->visible(fn (Reward $record): bool => ! in_array($record->status, [RewardStatus::Approved, RewardStatus::Rejected]))
                     ->form(fn (Reward $record) => $record->recipient_type === RecipientType::External
                         ? [
                             Repeater::make('recipients')
