@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\RewardResource\RelationManagers;
 
 use App\Enums\RecipientStatus;
+use App\Models\RewardRecipient;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -31,8 +32,12 @@ class RewardRecipientsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                TextColumn::make('user.name')->label('Name'),
-                TextColumn::make('user.email')->label('Email'),
+                TextColumn::make('name')
+                    ->label('Name')
+                    ->state(fn (RewardRecipient $record): string => $record->user?->name ?? $record->name ?? '—'),
+                TextColumn::make('email')
+                    ->label('Email')
+                    ->state(fn (RewardRecipient $record): string => $record->user?->email ?? $record->email ?? '—'),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (RecipientStatus $state): string => $state->color()),

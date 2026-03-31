@@ -14,6 +14,8 @@ class RewardRecipient extends Model
     protected $fillable = [
         'reward_id',
         'user_id',
+        'name',
+        'email',
         'status',
         'notified_at',
         'paid_at',

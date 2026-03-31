@@ -19,7 +19,7 @@ class NotifyRecipientsOnRewardApproval
 
             app(PaymentPostingService::class)->postReward($recipient);
 
-            $recipient->user->notify(new RewardNotification($event->reward, $recipient));
+            $recipient->user?->notify(new RewardNotification($event->reward, $recipient));
         });
     }
 }

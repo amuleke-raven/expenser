@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources;
 
+use App\Enums\RecipientType;
 use App\Enums\RewardStatus;
 use App\Enums\StepActionStatus;
 use App\Events\RewardApproved;
@@ -17,16 +18,17 @@ use App\Models\User;
 use App\Services\WorkflowEngine;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Schemas\Components\Section;
 
 class RewardResource extends Resource
 {
@@ -86,6 +88,14 @@ class RewardResource extends Resource
                         ->options(Project::query()->pluck('name', 'id'))
                         ->searchable()
                         ->nullable(),
+
+                    Select::make('recipient_type')
+                        ->label('Recipient Type')
+                        ->options(collect(RecipientType::cases())->mapWithKeys(
+                            fn ($case) => [$case->value => $case->label()]
+                        ))
+                        ->default(RecipientType::Internal->value)
+                        ->required(),
 
                     DatePicker::make('payout_date')
                         ->label('Payout Date')
@@ -177,20 +187,41 @@ class RewardResource extends Resource
                     ->label('Add Recipients')
                     ->icon('heroicon-o-user-plus')
                     ->visible(fn (Reward $record): bool => $record->status !== RewardStatus::Rejected)
-                    ->form([
-                        Select::make('user_ids')
-                            ->label('Select Recipients')
-                            ->options(User::query()->pluck('name', 'id'))
-                            ->multiple()
-                            ->searchable()
-                            ->required(),
-                    ])
+                    ->form(fn (Reward $record) => $record->recipient_type === RecipientType::External
+                        ? [
+                            Repeater::make('recipients')
+                                ->label('External Recipients')
+                                ->schema([
+                                    TextInput::make('name')->required()->label('Name'),
+                                    TextInput::make('email')->email()->required()->label('Email'),
+                                ])
+                                ->minItems(1)
+                                ->addActionLabel('Add Recipient'),
+                        ]
+                        : [
+                            Select::make('user_ids')
+                                ->label('Select Recipients')
+                                ->options(User::query()->pluck('name', 'id'))
+                                ->multiple()
+                                ->searchable()
+                                ->required(),
+                        ]
+                    )
                     ->action(function (Reward $record, array $data) {
-                        foreach ($data['user_ids'] as $userId) {
-                            RewardRecipient::firstOrCreate([
-                                'reward_id' => $record->id,
-                                'user_id' => $userId,
-                            ]);
+                        if ($record->recipient_type === RecipientType::External) {
+                            foreach ($data['recipients'] as $recipient) {
+                                RewardRecipient::firstOrCreate(
+                                    ['reward_id' => $record->id, 'email' => $recipient['email']],
+                                    ['name' => $recipient['name']],
+                                );
+                            }
+                        } else {
+                            foreach ($data['user_ids'] as $userId) {
+                                RewardRecipient::firstOrCreate([
+                                    'reward_id' => $record->id,
+                                    'user_id' => $userId,
+                                ]);
+                            }
                         }
                     }),
 
@@ -208,6 +239,7 @@ class RewardResource extends Resource
                         if ($type->requires_approval && $type->workflow_id) {
                             app(WorkflowEngine::class)->initiate($record, $type->workflow);
                         } else {
+                            $record->update(['status' => RewardStatus::Approved]);
                             event(new RewardApproved($record));
                         }
                     }),

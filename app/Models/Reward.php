@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RecipientType;
 use App\Enums\RewardStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,7 @@ class Reward extends Model
         'notes',
         'payout_date',
         'status',
+        'recipient_type',
         'approved_at',
         'rejected_at',
         'rejection_reason',
@@ -31,6 +33,7 @@ class Reward extends Model
     {
         return [
             'status' => RewardStatus::class,
+            'recipient_type' => RecipientType::class,
             'amount' => 'decimal:2',
             'payout_date' => 'date',
             'approved_at' => 'datetime',

@@ -46,7 +46,7 @@ class PaymentPostingService
             'user_id' => $recipient->user_id,
             'amount' => $recipient->reward->amount,
             'currency_id' => $recipient->reward->currency_id,
-            'payment_method_id' => $recipient->user->preferredPaymentMethod()?->id,
+            'payment_method_id' => $recipient->user?->preferredPaymentMethod()?->id,
             'status' => PaymentStatus::Pending,
         ]);
     }
