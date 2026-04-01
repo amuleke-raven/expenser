@@ -38,6 +38,7 @@ class StaffPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Staff/Widgets'), for: 'App\Filament\Staff\Widgets')
             ->widgets([])
+            ->sidebarCollapsibleOnDesktop()
             ->navigationItems([
                 NavigationItem::make('Admin Panel')
                     ->url('/admin')
