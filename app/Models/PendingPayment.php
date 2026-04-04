@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentSource;
 use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,8 @@ class PendingPayment extends Model
     protected $fillable = [
         'payable_id',
         'payable_type',
-        'user_id',
+        'payment_source',
+        'recipient_id',
         'amount',
         'currency_id',
         'payment_method_id',
@@ -28,6 +30,7 @@ class PendingPayment extends Model
     protected function casts(): array
     {
         return [
+            'payment_source' => PaymentSource::class,
             'status' => PaymentStatus::class,
             'amount' => 'decimal:2',
             'processed_at' => 'datetime',
@@ -39,9 +42,20 @@ class PendingPayment extends Model
         return $this->morphTo();
     }
 
-    public function user(): BelongsTo
+    /**
+     * The User recipient — resolved when payment_source is 'expense'.
+     */
+    public function recipientUser(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'recipient_id');
+    }
+
+    /**
+     * The RewardRecipient — resolved when payment_source is 'reward'.
+     */
+    public function rewardRecipient(): BelongsTo
+    {
+        return $this->belongsTo(RewardRecipient::class, 'recipient_id');
     }
 
     public function currency(): BelongsTo

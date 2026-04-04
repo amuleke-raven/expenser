@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\ExpenseStatus;
+use App\Enums\PaymentSource;
 use App\Enums\PaymentStatus;
 use App\Enums\RecipientStatus;
 use App\Filament\Admin\Resources\PendingPaymentResource\Pages;
@@ -10,15 +11,17 @@ use App\Models\Expense;
 use App\Models\PendingPayment;
 use App\Models\RewardRecipient;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Schemas\Components\Section;
+use Illuminate\Support\Collection;
 
 class PendingPaymentResource extends Resource
 {
@@ -50,18 +53,22 @@ class PendingPaymentResource extends Resource
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn ($query) => $query->with([
+                'recipientUser',
+                'rewardRecipient.user',
+            ]))
             ->columns([
                 TextColumn::make('payable_type')
                     ->label('Type')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         Expense::class => 'Expense',
-                        RewardRecipient::class => 'Reward Recipient',
+                        RewardRecipient::class => 'Reward',
                         default => $state,
                     })
                     ->color(fn ($state) => match ($state) {
                         Expense::class => 'info',
-                        RewardRecipient::class => 'success',
+                        RewardRecipient::class => 'info',
                         default => 'gray',
                     }),
 
@@ -73,13 +80,35 @@ class PendingPaymentResource extends Resource
                         default => '—',
                     }),
 
-                TextColumn::make('user.name')->label('Staff'),
-                TextColumn::make('user.email')->label('Email'),
+                TextColumn::make('recipient_name')
+                    ->label('Recipient')
+                    ->getStateUsing(function (PendingPayment $record): string {
+                        if ($record->payment_source === PaymentSource::Expense) {
+                            return $record->recipientUser?->name ?? '—';
+                        }
+
+                        return $record->rewardRecipient?->user?->name
+                            ?? $record->rewardRecipient?->name
+                            ?? '—';
+                    }),
+
+                TextColumn::make('recipient_email')
+                    ->label('Email')
+                    ->getStateUsing(function (PendingPayment $record): string {
+                        if ($record->payment_source === PaymentSource::Expense) {
+                            return $record->recipientUser?->email ?? '—';
+                        }
+
+                        return $record->rewardRecipient?->user?->email
+                            ?? $record->rewardRecipient?->email
+                            ?? '—';
+                    }),
                 TextColumn::make('amount')->money(),
                 TextColumn::make('currency.code')->label('Currency'),
 
                 TextColumn::make('amount_usd')
                     ->label('Amount (USD)')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->getStateUsing(fn (PendingPayment $record): string => '$'.number_format(
                         (float) $record->amount / max((float) ($record->currency?->conversion_rate ?? 1), 0.000001),
                         2
@@ -92,8 +121,13 @@ class PendingPaymentResource extends Resource
                     ->badge()
                     ->color(fn (PaymentStatus $state): string => $state->color()),
 
-                TextColumn::make('processedBy.name')->label('Processed By'),
-                TextColumn::make('processed_at')->dateTime()->label('Processed At'),
+                TextColumn::make('processedBy.name')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->label('Processed By'),
+                TextColumn::make('processed_at')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->dateTime()
+                    ->label('Processed At'),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -157,6 +191,55 @@ class PendingPaymentResource extends Resource
                             'status' => PaymentStatus::Failed,
                             'notes' => $data['notes'],
                         ]);
+                    }),
+            ])
+            ->bulkActions([
+                BulkAction::make('bulk_mark_paid')
+                    ->label('Mark as Paid')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function (Collection $records) {
+                        $records
+                            ->filter(fn (PendingPayment $record) => in_array($record->status, [PaymentStatus::Pending, PaymentStatus::Processing]))
+                            ->each(function (PendingPayment $record) {
+                                $record->update([
+                                    'status' => PaymentStatus::Paid,
+                                    'processed_by' => auth()->id(),
+                                    'processed_at' => now(),
+                                ]);
+
+                                $record->load('payable');
+
+                                if ($record->payable instanceof Expense) {
+                                    $record->payable->update(['status' => ExpenseStatus::Paid]);
+                                }
+
+                                if ($record->payable instanceof RewardRecipient) {
+                                    $record->payable->update([
+                                        'status' => RecipientStatus::Paid,
+                                        'paid_at' => now(),
+                                    ]);
+                                }
+                            });
+                    }),
+
+                BulkAction::make('bulk_mark_failed')
+                    ->label('Mark as Failed')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->form([
+                        Textarea::make('notes')->nullable()->label('Failure Notes'),
+                    ])
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function (Collection $records, array $data) {
+                        $records
+                            ->filter(fn (PendingPayment $record) => in_array($record->status, [PaymentStatus::Pending, PaymentStatus::Processing]))
+                            ->each(fn (PendingPayment $record) => $record->update([
+                                'status' => PaymentStatus::Failed,
+                                'notes' => $data['notes'],
+                            ]));
                     }),
             ]);
     }

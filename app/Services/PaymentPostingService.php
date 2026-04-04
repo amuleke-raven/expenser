@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PaymentSource;
 use App\Enums\PaymentStatus;
 use App\Models\Expense;
 use App\Models\PendingPayment;
@@ -22,7 +23,8 @@ class PaymentPostingService
         return PendingPayment::create([
             'payable_id' => $expense->id,
             'payable_type' => Expense::class,
-            'user_id' => $expense->user_id,
+            'payment_source' => PaymentSource::Expense,
+            'recipient_id' => $expense->user_id,
             'amount' => $expense->total_amount,
             'currency_id' => $expense->currency_id,
             'payment_method_id' => $expense->user->preferredPaymentMethod()?->id,
@@ -43,7 +45,8 @@ class PaymentPostingService
         return PendingPayment::create([
             'payable_id' => $recipient->id,
             'payable_type' => RewardRecipient::class,
-            'user_id' => $recipient->user_id,
+            'payment_source' => PaymentSource::Reward,
+            'recipient_id' => $recipient->id,
             'amount' => $recipient->reward->amount,
             'currency_id' => $recipient->reward->currency_id,
             'payment_method_id' => $recipient->user?->preferredPaymentMethod()?->id,

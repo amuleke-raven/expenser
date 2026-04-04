@@ -226,7 +226,7 @@ class RewardResource extends Resource
                     }),
 
                 Action::make('submit_for_approval')
-                    ->label('Submit for Approval')
+                    ->label('Submit')
                     ->icon('heroicon-o-paper-airplane')
                     ->color('info')
                     ->visible(fn (Reward $record): bool => $record->status === RewardStatus::Draft)
