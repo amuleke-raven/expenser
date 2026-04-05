@@ -53,6 +53,7 @@ class PendingPaymentResource extends Resource
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->checkIfRecordIsSelectableUsing(fn (PendingPayment $record): bool => in_array($record->status, [PaymentStatus::Pending, PaymentStatus::Processing]))
             ->modifyQueryUsing(fn ($query) => $query->with([
                 'recipientUser',
                 'rewardRecipient.user',
@@ -183,6 +184,7 @@ class PendingPaymentResource extends Resource
                     ->label('Mark as Failed')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
+                    ->visible(fn (PendingPayment $record): bool => in_array($record->status, [PaymentStatus::Pending, PaymentStatus::Processing]))
                     ->form([
                         Textarea::make('notes')->nullable()->label('Notes'),
                     ])

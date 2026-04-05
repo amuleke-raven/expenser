@@ -21,7 +21,10 @@ class NotifyAccountingOnExpenseApproval
         }
 
         if ($expense->status !== ExpenseStatus::Approved) {
-            $expense->update(['status' => ExpenseStatus::Approved]);
+            $expense->update([
+                'status' => ExpenseStatus::Approved,
+                'approved_at' => now(),
+            ]);
         }
 
         app(PaymentPostingService::class)->postExpense($expense);

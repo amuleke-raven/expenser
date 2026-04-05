@@ -101,6 +101,37 @@ class WorkflowEngine
                 }
             }
 
+            if ($decision === StepActionStatus::Skipped) {
+                $nextStep = $mhw->workflow->steps
+                    ->where('order', '>', $mhw->current_step)
+                    ->sortBy('order')
+                    ->first();
+
+                if ($nextStep) {
+                    $mhw->update(['current_step' => $nextStep->order]);
+
+                    $newAction = WorkflowStepAction::create([
+                        'model_has_workflow_id' => $mhw->id,
+                        'workflow_step_id' => $nextStep->id,
+                        'status' => StepActionStatus::Pending,
+                    ]);
+
+                    $roleName = Role::find($nextStep->role_id)?->name ?? '';
+                    if ($roleName) {
+                        $actors = User::role($roleName)->get();
+                        Notification::send($actors, new WorkflowActionRequiredNotification($newAction));
+                    }
+
+                    event(new WorkflowStepAdvanced($mhw, $newAction));
+                } else {
+                    $mhw->update([
+                        'status' => WorkflowStatus::Completed,
+                        'completed_at' => now(),
+                    ]);
+                    event(new WorkflowCompleted($mhw));
+                }
+            }
+
             if ($decision === StepActionStatus::Rejected) {
                 $mhw->update([
                     'status' => WorkflowStatus::Cancelled,
