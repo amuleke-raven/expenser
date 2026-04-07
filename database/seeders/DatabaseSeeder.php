@@ -18,5 +18,11 @@ class DatabaseSeeder extends Seeder
             ExpenseGroupSeeder::class,
             WorkflowSeeder::class,
         ]);
+
+        if (app()->environment(['local', 'staging'])) {
+            $this->call([
+                TicketSystemSeeder::class,
+            ]);
+        }
     }
 }
