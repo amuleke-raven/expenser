@@ -45,21 +45,23 @@ class TicketResource extends Resource
     {
         return $schema->schema([
             Section::make('Ticket Details')->schema([
-                TextEntry::make('ticket_number')->label('Ticket #'),
-                TextEntry::make('title'),
-                TextEntry::make('requester.name')->label('Requester'),
-                TextEntry::make('category.name')->label('Category'),
-                TextEntry::make('status')
-                    ->badge()
-                    ->color(fn (TicketStatus $state): string => $state->color()),
-                TextEntry::make('priority')
-                    ->badge()
-                    ->color(fn (TicketPriority $state): string => $state->color()),
-                TextEntry::make('assignee.name')->label('Assignee'),
-                TextEntry::make('due_at')->dateTime()->label('Due At'),
-                TextEntry::make('created_at')->dateTime()->label('Created'),
-                TextEntry::make('description')->html()->columnSpanFull(),
-            ])->columns(2),
+                Section::make('')->schema([
+                    TextEntry::make('ticket_number')->label('Ticket #'),
+                    TextEntry::make('title'),
+                    TextEntry::make('requester.name')->label('Requester'),
+                    TextEntry::make('category.name')->label('Category'),
+                    TextEntry::make('status')
+                        ->badge()
+                        ->color(fn (TicketStatus $state): string => $state->color()),
+                    TextEntry::make('priority')
+                        ->badge()
+                        ->color(fn (TicketPriority $state): string => $state->color()),
+                    TextEntry::make('assignee.name')->label('Assignee'),
+                    TextEntry::make('due_at')->dateTime()->label('Due At'),
+                    TextEntry::make('created_at')->dateTime()->label('Created'),
+                    TextEntry::make('description')->html()->columnSpanFull(),
+                ])->columns(2),
+            ])->columnSpanFull(),
         ]);
     }
 
@@ -108,7 +110,7 @@ class TicketResource extends Resource
                     ->required()
                     ->toolbarButtons(['bold', 'italic', 'bulletList', 'orderedList', 'link'])
                     ->columnSpanFull(),
-            ])->columns(2),
+            ])->columnSpanFull(),
         ]);
     }
 
