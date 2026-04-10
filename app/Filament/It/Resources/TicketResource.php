@@ -94,7 +94,7 @@ class TicketResource extends Resource
                     ->helperText('This note is visible to IT staff only, not the requester.')
                     ->rows(3)
                     ->dehydrated(false),
-            ]),
+            ])->columnSpanFull(),
         ]);
     }
 

@@ -16,6 +16,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
+use Filament\Schemas\Components\Section;
 
 class TicketCategoryResource extends Resource
 {
@@ -32,41 +33,43 @@ class TicketCategoryResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('name')
-                ->required()
-                ->maxLength(255)
-                ->live(onBlur: true)
-                ->afterStateUpdated(fn ($state, $set) => $set('slug', Str::slug($state)))
-                ->helperText('The display name for this category.'),
+            Section::make('')->schema([
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(255)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn ($state, $set) => $set('slug', Str::slug($state)))
+                    ->helperText('The display name for this category.'),
 
-            TextInput::make('slug')
-                ->required()
-                ->maxLength(255)
-                ->unique(ignoreRecord: true)
-                ->helperText('Auto-generated from name. Must be unique.'),
+                TextInput::make('slug')
+                    ->required()
+                    ->maxLength(255)
+                    ->unique(ignoreRecord: true)
+                    ->helperText('Auto-generated from name. Must be unique.'),
 
-            TextInput::make('icon')
-                ->maxLength(255)
-                ->placeholder('computer-desktop')
-                ->helperText('Heroicon name without prefix, e.g. "computer-desktop".'),
+                TextInput::make('icon')
+                    ->maxLength(255)
+                    ->placeholder('computer-desktop')
+                    ->helperText('Heroicon name without prefix, e.g. "computer-desktop".'),
 
-            TextInput::make('sla_hours')
-                ->numeric()
-                ->required()
-                ->default(24)
-                ->minValue(1)
-                ->helperText('Default SLA hours for tickets in this category.'),
+                TextInput::make('sla_hours')
+                    ->numeric()
+                    ->required()
+                    ->default(24)
+                    ->minValue(1)
+                    ->helperText('Default SLA hours for tickets in this category.'),
 
-            Select::make('default_assignee_id')
-                ->label('Default Assignee')
-                ->options(fn () => User::query()->whereHas('roles', fn ($q) => $q->where('name', 'it_staff'))->pluck('name', 'id'))
-                ->searchable()
-                ->nullable()
-                ->helperText('Optional: automatically assign new tickets in this category.'),
+                Select::make('default_assignee_id')
+                    ->label('Default Assignee')
+                    ->options(fn () => User::query()->whereHas('roles', fn ($q) => $q->where('name', 'it_staff'))->pluck('name', 'id'))
+                    ->searchable()
+                    ->nullable()
+                    ->helperText('Optional: automatically assign new tickets in this category.'),
 
-            Toggle::make('is_active')
-                ->default(true)
-                ->helperText('Inactive categories are hidden from the ticket submission form.'),
+                Toggle::make('is_active')
+                    ->default(true)
+                    ->helperText('Inactive categories are hidden from the ticket submission form.'),
+            ])->columnSpanFull(),
         ]);
     }
 

@@ -46,6 +46,7 @@ class TicketResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+
             Section::make('Submit a Support Ticket')->schema([
                 TextInput::make('title')
                     ->required()
@@ -88,7 +89,7 @@ class TicketResource extends Resource
                     ->directory('ticket-attachments')
                     ->columnSpanFull()
                     ->helperText('Attach screenshots, documents, or files. Max 10MB each. Accepted: images, PDF, Word, ZIP.'),
-            ])->columns(2),
+            ])->columnSpanFull(),
         ]);
     }
 
