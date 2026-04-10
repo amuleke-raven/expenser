@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Filament\Admin\Resources;
+namespace App\Filament\Staff\Resources;
 
 use App\Enums\ExpenseStatus;
 use App\Enums\PaymentSource;
 use App\Enums\PaymentStatus;
 use App\Enums\RecipientStatus;
-use App\Filament\Admin\Resources\PendingPaymentResource\Pages;
+use App\Filament\Staff\Resources\PendingPaymentResource\Pages;
 use App\Models\Expense;
 use App\Models\PendingPayment;
 use App\Models\RewardRecipient;

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Admin\Resources\PendingPaymentResource\Pages;
+namespace App\Filament\Staff\Resources\PendingPaymentResource\Pages;
 
-use App\Filament\Admin\Resources\PendingPaymentResource;
+use App\Filament\Staff\Resources\PendingPaymentResource;
 use Filament\Resources\Pages\ListRecords;
 
 class ListPendingPayments extends ListRecords

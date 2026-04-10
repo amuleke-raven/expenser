@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Admin\Widgets;
+namespace App\Filament\Staff\Widgets;
 
 use App\Enums\PaymentStatus;
 use App\Models\Currency;

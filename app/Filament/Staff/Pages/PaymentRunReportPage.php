@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Admin\Pages;
+namespace App\Filament\Staff\Pages;
 
 use App\Enums\PaymentMethodType;
 use App\Exports\PaymentRunExport;
@@ -27,7 +27,7 @@ class PaymentRunReportPage extends Page implements HasForms
 
     protected static ?int $navigationSort = 1;
 
-    protected string $view = 'filament.admin.pages.payment-run-report-page';
+    protected string $view = 'filament.staff.pages.payment-run-report-page';
 
     public ?array $filters = [
         'date_from' => null,

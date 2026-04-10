@@ -15,9 +15,11 @@ use App\Listeners\TriggerExpenseWorkflow;
 use App\Models\Expense;
 use App\Models\ExpenseLineItem;
 use App\Models\Project;
+use App\Models\Ticket;
 use App\Observers\ExpenseLineItemObserver;
 use App\Observers\ExpenseObserver;
 use App\Observers\ProjectObserver;
+use App\Observers\TicketObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -31,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         Expense::observe(ExpenseObserver::class);
         ExpenseLineItem::observe(ExpenseLineItemObserver::class);
         Project::observe(ProjectObserver::class);
+        Ticket::observe(TicketObserver::class);
 
         Model::preventLazyLoading(app()->isLocal());
 

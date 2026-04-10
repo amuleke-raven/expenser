@@ -28,7 +28,7 @@ class MyRewardsPage extends Page implements HasTable
                 RewardRecipient::query()
                     ->where('user_id', auth()->id())
                     ->whereHas('reward', fn ($q) => $q->where('status', RewardStatus::Approved)->orWhere('status', RewardStatus::Paid))
-                    ->with(['reward.rewardType', 'reward.currency'])
+                    ->with(['reward.rewardType', 'reward.currency', 'reward.project'])
             )
             ->defaultSort('created_at', 'desc')
             ->columns([
@@ -47,6 +47,12 @@ class MyRewardsPage extends Page implements HasTable
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (RecipientStatus $state): string => $state->color()),
+
+                TextColumn::make('reward.project.name')->label('Project')->default('—'),
+
+                TextColumn::make('reward.currency.code')->label('Currency')->default('—'),
+
+                TextColumn::make('reward.payout_date')->date()->label('Payout Date')->default('—'),
 
                 TextColumn::make('notified_at')->dateTime()->label('Notified'),
             ]);
