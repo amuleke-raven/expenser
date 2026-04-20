@@ -29,7 +29,7 @@ class ExpenseTypesRelationManager extends RelationManager
             TextInput::make('name')->required()->maxLength(255),
             Textarea::make('description')->nullable()->columnSpanFull(),
             Toggle::make('requires_approval')->label('Requires Approval')->live(),
-            Toggle::make('requires_attachment')->label('Requires Attachment'),
+            Toggle::make('requires_attachment')->label('Requires Attachment')->default(true),
             Select::make('workflow_id')
                 ->label('Workflow')
                 ->options(Workflow::query()->pluck('name', 'id'))

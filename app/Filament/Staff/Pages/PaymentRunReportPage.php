@@ -14,6 +14,8 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Maatwebsite\Excel\Facades\Excel;
+use Filament\Support\Icons\Heroicon;
+use Filament\Actions\Action;
 
 class PaymentRunReportPage extends Page implements HasForms
 {
@@ -48,7 +50,20 @@ class PaymentRunReportPage extends Page implements HasForms
     protected function getFormSchema(): array
     {
         return [
-            Section::make('Filters')->schema([
+
+            Section::make('Filters')
+                ->extraAttributes(['class' => 'mb-3'])
+                ->afterHeader([
+                    Action::make('Export to Excel')
+                        ->icon(Heroicon::DocumentArrowDown)
+                        ->action(function () {
+                            return Excel::download(
+                                new PaymentRunExport($this->filters),
+                                'payment-run-'.now()->format('Y-m-d').'.xlsx'
+                            );
+                        }),
+                ])
+                ->schema([
                 DatePicker::make('filters.date_from')->label('Date From'),
                 DatePicker::make('filters.date_to')->label('Date To'),
                 Select::make('filters.project_id')
@@ -67,22 +82,14 @@ class PaymentRunReportPage extends Page implements HasForms
                         fn ($case) => [$case->value => $case->label()]
                     ))
                     ->nullable(),
-                Toggle::make('filters.include_expenses')->label('Include Expenses')->default(true),
-                Toggle::make('filters.include_rewards')->label('Include Rewards')->default(true),
                 Select::make('filters.status')
                     ->label('Status')
                     ->options(['approved' => 'Approved', 'paid' => 'Paid'])
                     ->default('approved'),
-            ]),
+                Toggle::make('filters.include_expenses')->label('Include Expenses')->default(true),
+                Toggle::make('filters.include_rewards')->label('Include Rewards')->default(true),
+            ])->columns(2),
 
         ];
-    }
-
-    public function export()
-    {
-        return Excel::download(
-            new PaymentRunExport($this->filters),
-            'payment-run-'.now()->format('Y-m-d').'.xlsx'
-        );
     }
 }
