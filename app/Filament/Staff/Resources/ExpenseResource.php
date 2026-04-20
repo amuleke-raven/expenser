@@ -19,6 +19,8 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -30,6 +32,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 
 class ExpenseResource extends Resource
 {
@@ -140,6 +143,38 @@ class ExpenseResource extends Resource
                         ->columnSpanFull(),
                 ])->columnSpanFull(),
 
+        ]);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->schema([
+            Section::make()->schema([
+                TextEntry::make('ref')
+                    ->label('Reference')
+                    ->getStateUsing(fn (Expense $record): string => $record->ref()),
+
+                TextEntry::make('expenseType.name')->label('Expense Type'),
+                TextEntry::make('project.name')->label('Project'),
+                TextEntry::make('currency.code')->label('Currency'),
+                TextEntry::make('total_amount')->money()->label('Total'),
+                TextEntry::make('status')
+                    ->badge()
+                    ->color(fn (ExpenseStatus $state): string => $state->color()),
+                TextEntry::make('description')->columnSpanFull(),
+                TextEntry::make('submitted_at')->dateTime()->label('Submitted'),
+
+                RepeatableEntry::make('attachments')
+                    ->label('Attachments')
+                    ->schema([
+                        TextEntry::make('original_name')
+                            ->label('File')
+                            ->url(fn ($record) => Storage::url($record->path))
+                            ->openUrlInNewTab(),
+                    ])
+                    ->columnSpanFull()
+                    ->visible(fn (Expense $record): bool => $record->attachments->isNotEmpty()),
+            ])->columnSpanFull(),
         ]);
     }
 
