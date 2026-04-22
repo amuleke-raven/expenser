@@ -22,8 +22,8 @@ class TicketStatsWidget extends StatsOverviewWidget
         $avgResolutionHours = Ticket::query()
             ->where('status', TicketStatus::Resolved->value)
             ->whereNotNull('resolved_at')
-            ->selectRaw('AVG((julianday(resolved_at) - julianday(created_at)) * 24) as avg_hours')
-            ->value('avg_hours');
+            ->get(['created_at', 'resolved_at'])
+            ->avg(fn (Ticket $t) => $t->created_at->diffInHours($t->resolved_at));
 
         $slaCompliancePercent = $this->calculateSlaCompliance();
 

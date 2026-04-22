@@ -102,7 +102,7 @@ class TicketResource extends Resource
 
                 Select::make('assignee_id')
                     ->label('Assignee')
-                    ->options(User::query()->pluck('name', 'id'))
+                    ->options(fn () => User::query()->whereHas('roles', fn ($q) => $q->whereIn('name', ['it_staff', 'admin', 'super_admin']))->pluck('name', 'id'))
                     ->searchable()
                     ->nullable(),
 
@@ -193,7 +193,7 @@ class TicketResource extends Resource
                     ->form([
                         Select::make('assignee_id')
                             ->label('Assign To')
-                            ->options(User::query()->pluck('name', 'id'))
+                            ->options(fn () => User::query()->whereHas('roles', fn ($q) => $q->whereIn('name', ['it_staff', 'admin', 'super_admin']))->pluck('name', 'id'))
                             ->searchable()
                             ->required(),
                     ])

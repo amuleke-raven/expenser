@@ -138,8 +138,8 @@ class ExpenseResource extends Resource
                         ->visibility('public')
                         ->disk('public')
                         ->directory('expense-attachments')
-                        ->visible(fn (Get $get): bool => (bool) ExpenseType::find($get('expense_type_id'))?->requires_attachment
-                        )
+                        ->visible(fn (Get $get): bool => (bool) ExpenseType::find($get('expense_type_id'))?->requires_attachment)
+                        ->required(fn (Get $get): bool => (bool) ExpenseType::find($get('expense_type_id'))?->requires_attachment)
                         ->columnSpanFull(),
                 ])->columnSpanFull(),
 

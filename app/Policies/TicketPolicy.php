@@ -24,7 +24,7 @@ class TicketPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole('staff');
+        return true;
     }
 
     public function update(User $user, Ticket $ticket): bool

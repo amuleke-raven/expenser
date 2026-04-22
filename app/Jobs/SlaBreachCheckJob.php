@@ -19,6 +19,7 @@ class SlaBreachCheckJob implements ShouldQueue
             ->whereNotNull('due_at')
             ->whereNotIn('status', ['resolved', 'closed', 'cancelled'])
             ->where('due_at', '<', now()->addHours(2))
+            ->where('sla_breach_notified', false)
             ->with(['assignee', 'requester'])
             ->get();
 
@@ -42,6 +43,8 @@ class SlaBreachCheckJob implements ShouldQueue
             foreach ($notifiables as $user) {
                 $user->notify(new SlaBreachWarningNotification($ticket));
             }
+
+            $ticket->updateQuietly(['sla_breach_notified' => true]);
         }
     }
 }

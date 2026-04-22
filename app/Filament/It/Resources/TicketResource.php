@@ -14,10 +14,12 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -58,6 +60,35 @@ class TicketResource extends Resource
                 TextEntry::make('created_at')->dateTime()->label('Created'),
                 TextEntry::make('description')->html()->columnSpanFull(),
             ])->columns(2),
+
+            Section::make('Conversation')->schema([
+                RepeatableEntry::make('comments')
+                    ->label('')
+                    ->schema([
+                        TextEntry::make('user.name')
+                            ->label('')
+                            ->weight(FontWeight::Bold)
+                            ->inline(),
+                        TextEntry::make('created_at')
+                            ->label('')
+                            ->since()
+                            ->inline()
+                            ->color('gray'),
+                        TextEntry::make('is_internal')
+                            ->label('')
+                            ->inline()
+                            ->badge()
+                            ->formatStateUsing(fn (bool $state): string => $state ? 'Internal' : '')
+                            ->color('warning')
+                            ->visible(fn (bool $state): bool => $state),
+                        TextEntry::make('body')
+                            ->label('')
+                            ->html()
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(3)
+                    ->contained(false),
+            ])->collapsible(),
         ]);
     }
 

@@ -3,16 +3,20 @@
 namespace App\Notifications\Tickets;
 
 use App\Models\Ticket;
+use App\Models\TicketComment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class TicketCreatedNotification extends Notification implements ShouldQueue
+class TicketRequesterRepliedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public readonly Ticket $ticket) {}
+    public function __construct(
+        public readonly Ticket $ticket,
+        public readonly TicketComment $comment,
+    ) {}
 
     /**
      * @return list<string>
@@ -25,10 +29,9 @@ class TicketCreatedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("New ticket [{$this->ticket->ticket_number}]: {$this->ticket->title}")
-            ->line("A new support ticket has been submitted by {$this->ticket->requester->name}.")
-            ->line("Category: {$this->ticket->category->name}")
-            ->line("Priority: {$this->ticket->priority->label()}")
+            ->subject("Requester replied on [{$this->ticket->ticket_number}]")
+            ->line("{$this->ticket->requester->name} has replied to ticket: {$this->ticket->title}")
+            ->line(strip_tags($this->comment->body))
             ->action('View Ticket', route('filament.it.resources.tickets.view', $this->ticket));
     }
 
@@ -40,8 +43,9 @@ class TicketCreatedNotification extends Notification implements ShouldQueue
         return [
             'ticket_id' => $this->ticket->id,
             'ticket_number' => $this->ticket->ticket_number,
-            'title' => $this->ticket->title,
-            'type' => 'ticket_created',
+            'comment_id' => $this->comment->id,
+            'requester_name' => $this->ticket->requester->name,
+            'type' => 'ticket_requester_replied',
         ];
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Ticket extends Model
 {
@@ -33,6 +34,7 @@ class Ticket extends Model
         'resolved_at',
         'due_at',
         'sla_breached',
+        'sla_breach_notified',
     ];
 
     /**
@@ -49,6 +51,7 @@ class Ticket extends Model
             'resolved_at' => 'datetime',
             'due_at' => 'datetime',
             'sla_breached' => 'boolean',
+            'sla_breach_notified' => 'boolean',
         ];
     }
 
@@ -59,18 +62,38 @@ class Ticket extends Model
         static::creating(function (Ticket $ticket) {
             if (empty($ticket->ticket_number)) {
                 $year = now()->year;
-                $count = static::whereYear('created_at', $year)->withTrashed()->count() + 1;
+                $count = DB::transaction(function () use ($year): int {
+                    $latest = static::whereYear('created_at', $year)
+                        ->withTrashed()
+                        ->lockForUpdate()
+                        ->count();
+
+                    return $latest + 1;
+                });
                 $ticket->ticket_number = 'RR-'.$year.'-'.str_pad((string) $count, 4, '0', STR_PAD_LEFT);
             }
 
-            if (empty($ticket->due_at) && $ticket->category_id) {
+            if ($ticket->category_id) {
                 $category = TicketCategory::find($ticket->category_id);
+
                 if ($category) {
-                    $multiplier = $ticket->priority instanceof TicketPriority
-                        ? $ticket->priority->slaMultiplier()
-                        : TicketPriority::Medium->slaMultiplier();
-                    $hours = (int) round($category->sla_hours * $multiplier);
-                    $ticket->due_at = now()->addHours($hours);
+                    if (empty($ticket->assignee_id) && $category->default_assignee_id) {
+                        $ticket->assignee_id = $category->default_assignee_id;
+                    }
+
+                    if (empty($ticket->due_at)) {
+                        $priority = $ticket->priority instanceof TicketPriority
+                            ? $ticket->priority
+                            : TicketPriority::Medium;
+
+                        $slaPolicy = SlaPolicy::where('priority', $priority->value)->first();
+
+                        $hours = $slaPolicy
+                            ? $slaPolicy->resolve_hours
+                            : (int) round($category->sla_hours * $priority->slaMultiplier());
+
+                        $ticket->due_at = now()->addHours($hours);
+                    }
                 }
             }
         });
@@ -94,6 +117,11 @@ class Ticket extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(TicketComment::class);
+    }
+
+    public function publicComments(): HasMany
+    {
+        return $this->hasMany(TicketComment::class)->where('is_internal', false);
     }
 
     public function attachments(): HasMany

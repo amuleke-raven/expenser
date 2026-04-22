@@ -13,7 +13,18 @@ class TicketActivityLogger
      */
     public function log(Ticket $ticket, string $event, array $meta = [], ?User $user = null): void
     {
-        $userId = $user !== null ? $user->id : auth()->id();
+        $actor = $user ?? auth()->user();
+        $userId = $actor?->id;
+
+        if (
+            $event === 'comment_added'
+            && $ticket->first_response_at === null
+            && $actor !== null
+            && $actor->id !== $ticket->requester_id
+            && $actor->hasAnyRole(['it_staff', 'admin', 'super_admin'])
+        ) {
+            $ticket->updateQuietly(['first_response_at' => now()]);
+        }
 
         TicketActivityLog::create([
             'ticket_id' => $ticket->id,
