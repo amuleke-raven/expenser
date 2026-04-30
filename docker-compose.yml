@@ -30,7 +30,7 @@ services:
       MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-hello@example.com}"
       MAIL_FROM_NAME: "${APP_NAME:-RemoteRaven}"
     volumes:
-      - db_data:/var/www/html/database
+      - db_data:/data
       - app_storage:/var/www/html/storage/app
     restart: unless-stopped
     healthcheck:

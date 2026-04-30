@@ -9,7 +9,8 @@ RUN npm install
 COPY resources/ resources/
 COPY vite.config.js ./
 COPY public/ public/
-COPY database/seeders database/seeders
+COPY database/seeders/ database/seeders/
+COPY database/migrations/ database/migrations/
 ##
 RUN npm run build
 
@@ -46,6 +47,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         bcmath \
         exif \
         opcache \
+	fileinfo \
     && apk add --no-cache sqlite-dev \
     && docker-php-ext-install pdo_sqlite
 
