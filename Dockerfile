@@ -9,7 +9,8 @@ RUN npm install
 COPY resources/ resources/
 COPY vite.config.js ./
 COPY public/ public/
-COPY database/seeders database/seeders
+COPY database/seeders/ database/seeders/
+COPY database/migrations/ database/migrations/
 ##
 RUN npm run build
 
