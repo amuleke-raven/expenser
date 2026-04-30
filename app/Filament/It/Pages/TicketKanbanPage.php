@@ -101,13 +101,30 @@ class TicketKanbanPage extends Page
     public function updateTicketStatus(int $ticketId, string $newStatus): void
     {
         $ticket = Ticket::findOrFail($ticketId);
-        $oldStatus = $ticket->status;
 
-        $ticket->update(['status' => $newStatus]);
+        $this->authorize('update', $ticket);
+
+        $validStatus = TicketStatus::tryFrom($newStatus);
+        if ($validStatus === null) {
+            return;
+        }
+
+        $allowedTransitions = $ticket->status->allowedTransitionsFor('it_staff');
+        if (! in_array($validStatus, $allowedTransitions, true)) {
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => "Cannot move ticket to {$validStatus->label()} from {$ticket->status->label()}.",
+            ]);
+
+            return;
+        }
+
+        $oldStatus = $ticket->status;
+        $ticket->update(['status' => $validStatus]);
 
         app()->make(TicketActivityLogger::class)->log($ticket, 'status_changed', [
             'from' => $oldStatus->value,
-            'to' => $newStatus,
+            'to' => $validStatus->value,
         ]);
 
         $this->loadTickets();

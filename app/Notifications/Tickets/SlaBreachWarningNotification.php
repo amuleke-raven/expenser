@@ -32,7 +32,7 @@ class SlaBreachWarningNotification extends Notification implements ShouldQueue
             ->line("Title: {$this->ticket->title}")
             ->line("Hours remaining: {$hoursRemaining}")
             ->line('Due at: '.$this->ticket->due_at?->format('Y-m-d H:i'))
-            ->action('View Ticket Now', url("/it/tickets/{$this->ticket->id}"));
+            ->action('View Ticket Now', route('filament.it.resources.tickets.view', $this->ticket));
     }
 
     /**

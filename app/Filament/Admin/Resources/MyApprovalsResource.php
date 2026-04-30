@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources;
 
+use App\Enums\ExpenseStatus;
 use App\Enums\StepActionStatus;
 use App\Filament\Admin\Resources\MyApprovalsResource\Pages;
 use App\Models\Expense;
@@ -11,13 +12,17 @@ use App\Models\WorkflowStepAction;
 use App\Services\WorkflowEngine;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Storage;
 
 class MyApprovalsResource extends Resource
 {
@@ -80,12 +85,12 @@ class MyApprovalsResource extends Resource
                     ->badge()
                     ->getStateUsing(fn (WorkflowStepAction $record): string => match (true) {
                         $record->modelHasWorkflow?->workflowable instanceof Expense => 'Expense',
-                        $record->modelHasWorkflow?->workflowable instanceof Reward => 'Reward',
+                        $record->modelHasWorkflow?->workflowable instanceof Reward => 'Disbursement',
                         default => 'Unknown',
                     })
                     ->color(fn ($state) => match ($state) {
                         'Expense' => 'info',
-                        'Reward' => 'success',
+                        'Disbursement' => 'success',
                         default => 'gray',
                     }),
 
@@ -109,6 +114,78 @@ class MyApprovalsResource extends Resource
                 TextColumn::make('created_at')->dateTime()->label('Submitted'),
             ])
             ->actions([
+                Action::make('viewDetails')
+                    ->label('View Details')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->visible(fn (WorkflowStepAction $record): bool => $record->modelHasWorkflow?->workflowable instanceof Expense)
+                    ->infolist(fn (WorkflowStepAction $record): array => [
+                        Section::make('Expense Details')
+                            ->columns(3)
+                            ->schema([
+                                TextEntry::make('ref')
+                                    ->label('Reference')
+                                    ->getStateUsing(fn () => $record->modelHasWorkflow->workflowable->ref()),
+                                TextEntry::make('expense_type')
+                                    ->label('Type')
+                                    ->getStateUsing(fn () => $record->modelHasWorkflow->workflowable->expenseType?->name ?? '—'),
+                                TextEntry::make('project')
+                                    ->label('Project')
+                                    ->getStateUsing(fn () => $record->modelHasWorkflow->workflowable->project?->name ?? '—'),
+                                TextEntry::make('currency')
+                                    ->label('Currency')
+                                    ->getStateUsing(fn () => $record->modelHasWorkflow->workflowable->currency?->code ?? '—'),
+                                TextEntry::make('total_amount')
+                                    ->label('Total Amount')
+                                    ->getStateUsing(fn () => $record->modelHasWorkflow->workflowable->total_amount)
+                                    ->numeric(decimalPlaces: 2),
+                                TextEntry::make('status')
+                                    ->label('Status')
+                                    ->getStateUsing(fn () => $record->modelHasWorkflow->workflowable->status)
+                                    ->formatStateUsing(fn (ExpenseStatus $state): string => $state->label())
+                                    ->badge()
+                                    ->color(fn (ExpenseStatus $state): string => $state->color()),
+                                TextEntry::make('submitted_at')
+                                    ->label('Submitted At')
+                                    ->getStateUsing(fn () => $record->modelHasWorkflow->workflowable->submitted_at?->format('d M Y, H:i')),
+                                TextEntry::make('description')
+                                    ->label('Description')
+                                    ->getStateUsing(fn () => $record->modelHasWorkflow->workflowable->description)
+                                    ->columnSpanFull(),
+                            ]),
+                        Section::make('Line Items')
+                            ->schema([
+                                RepeatableEntry::make('lineItems')
+                                    ->hiddenLabel()
+                                    ->state(fn () => $record->modelHasWorkflow->workflowable->lineItems)
+                                    ->schema([
+                                        TextEntry::make('description')->label('Description'),
+                                        TextEntry::make('quantity')->numeric(decimalPlaces: 2),
+                                        TextEntry::make('unit_price')->money()->label('Unit Price'),
+                                        TextEntry::make('total')->money(),
+                                    ])
+                                    ->columns(4)
+                                    ->columnSpanFull(),
+                            ]),
+                        Section::make('Attachments')
+                            ->visible(fn () => $record->modelHasWorkflow->workflowable->attachments->isNotEmpty())
+                            ->schema([
+                                RepeatableEntry::make('attachments')
+                                    ->hiddenLabel()
+                                    ->state(fn () => $record->modelHasWorkflow->workflowable->attachments)
+                                    ->schema([
+                                        TextEntry::make('original_name')
+                                            ->label('File')
+                                            ->url(fn ($record) => Storage::url($record->path))
+                                            ->openUrlInNewTab(),
+                                    ])
+                                    ->columnSpanFull(),
+                            ]),
+                    ])
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->slideOver(),
+
                 Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')

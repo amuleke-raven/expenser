@@ -21,6 +21,8 @@ class Reward extends Model
         'amount',
         'currency_id',
         'notes',
+        'custom_message',
+        'is_billable',
         'payout_date',
         'status',
         'recipient_type',
@@ -33,6 +35,7 @@ class Reward extends Model
     {
         return [
             'status' => RewardStatus::class,
+            'is_billable' => 'boolean',
             'recipient_type' => RecipientType::class,
             'amount' => 'decimal:2',
             'payout_date' => 'date',
@@ -64,6 +67,11 @@ class Reward extends Model
     public function recipients(): HasMany
     {
         return $this->hasMany(RewardRecipient::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(RewardAttachment::class);
     }
 
     public function modelHasWorkflow(): MorphOne

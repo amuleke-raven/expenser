@@ -32,7 +32,7 @@ class TicketCommentAddedNotification extends Notification implements ShouldQueue
             ->subject("New reply on ticket [{$this->ticket->ticket_number}]")
             ->line("IT Support has replied to your ticket: {$this->ticket->title}")
             ->line(strip_tags($this->comment->body))
-            ->action('View Ticket', url("/portal/tickets/{$this->ticket->id}"));
+            ->action('View Ticket', route('filament.staff.resources.tickets.view', $this->ticket));
     }
 
     /**

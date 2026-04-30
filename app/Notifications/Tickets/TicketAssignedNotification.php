@@ -29,7 +29,7 @@ class TicketAssignedNotification extends Notification implements ShouldQueue
             ->line("You have been assigned ticket: {$this->ticket->title}")
             ->line("Priority: {$this->ticket->priority->label()}")
             ->line('Due: '.($this->ticket->due_at?->format('Y-m-d H:i') ?? 'Not set'))
-            ->action('View Ticket', url("/it/tickets/{$this->ticket->id}"));
+            ->action('View Ticket', route('filament.it.resources.tickets.view', $this->ticket));
     }
 
     /**

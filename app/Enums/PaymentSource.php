@@ -11,7 +11,7 @@ enum PaymentSource: string
     {
         return match ($this) {
             self::Expense => 'Expense',
-            self::Reward => 'Reward',
+            self::Reward => 'Disbursement',
         };
     }
 }

@@ -74,10 +74,10 @@ enum TicketStatus: string
                 self::Escalated => [self::InProgress, self::OnHold, self::Resolved],
                 default => [],
             },
-            'admin', 'super_admin' => array_filter(
+            'admin', 'super_admin' => array_values(array_filter(
                 self::cases(),
                 fn (self $case) => $case !== $this
-            ),
+            )),
             default => [],
         };
     }

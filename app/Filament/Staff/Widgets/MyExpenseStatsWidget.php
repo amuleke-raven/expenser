@@ -40,7 +40,7 @@ class MyExpenseStatsWidget extends BaseWidget
             Stat::make('Submitted This Month', '$'.number_format($submittedSum, 2)),
             Stat::make('Approved This Month', '$'.number_format($approvedSum, 2)),
             Stat::make('Pending Approval', $pendingCount)->color('warning'),
-            Stat::make('Rewards Received', '$'.number_format($rewardsSum, 2))->color('success'),
+            Stat::make('Disbursements Received', '$'.number_format($rewardsSum, 2))->color('success'),
         ];
     }
 }

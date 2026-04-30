@@ -64,7 +64,7 @@ class PendingPaymentResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         Expense::class => 'Expense',
-                        RewardRecipient::class => 'Reward',
+                        RewardRecipient::class => 'Disbursement',
                         default => $state,
                     })
                     ->color(fn ($state) => match ($state) {
@@ -140,7 +140,7 @@ class PendingPaymentResource extends Resource
                     ->label('Type')
                     ->options([
                         Expense::class => 'Expense',
-                        RewardRecipient::class => 'Reward Recipient',
+                        RewardRecipient::class => 'Disbursement Recipient',
                     ]),
 
                 Filter::make('created_at')

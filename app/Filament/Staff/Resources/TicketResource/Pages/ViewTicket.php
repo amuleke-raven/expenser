@@ -4,6 +4,7 @@ namespace App\Filament\Staff\Resources\TicketResource\Pages;
 
 use App\Enums\TicketStatus;
 use App\Filament\Staff\Resources\TicketResource;
+use App\Notifications\Tickets\TicketRequesterRepliedNotification;
 use App\Services\TicketActivityLogger;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -39,6 +40,10 @@ class ViewTicket extends ViewRecord
                         'comment_id' => $comment->id,
                         'is_internal' => false,
                     ]);
+
+                    if ($ticket->assignee) {
+                        $ticket->assignee->notify(new TicketRequesterRepliedNotification($ticket, $comment));
+                    }
                 }),
 
             Action::make('reopen')

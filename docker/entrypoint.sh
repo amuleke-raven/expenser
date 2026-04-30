@@ -22,13 +22,9 @@ fi
 # Run migrations
 php artisan migrate --force
 
-# Seed database on first run (idempotent — all seeders use firstOrCreate)
-#USER_COUNT=$(php artisan tinker --execute "echo \App\Models\User::count();" 2>/dev/null | tail -1)
-#if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
-    echo "Seeding database..."
-    php artisan db:seed --force
-#fi
-
+# Database seeding logic
+echo "Seeding database..."
+php artisan db:seed --force
 # Create public storage symlink for file uploads
 php artisan storage:link --force
 
@@ -37,9 +33,16 @@ if [ "$APP_ENV" = "production" ]; then
     php artisan config:cache
     php artisan route:cache
     php artisan view:cache
+    echo "Production caches built"
 fi
 
-# Fix permissions
+# Fix permissions for storage and cache directories
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+find /var/www/html/storage -type d -exec chmod 775 {} \;
+find /var/www/html/storage -type f -exec chmod 664 {} \;
+find /var/www/html/bootstrap/cache -type d -exec chmod 775 {} \;
+find /var/www/html/bootstrap/cache -type f -exec chmod 664 {} \;
+
+echo "Entrypoint setup complete - starting application..."
 
 exec "$@"

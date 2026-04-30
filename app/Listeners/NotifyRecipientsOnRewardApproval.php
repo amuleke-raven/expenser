@@ -11,6 +11,9 @@ class NotifyRecipientsOnRewardApproval
 {
     public function handle(RewardApproved $event): void
     {
+        // Eager load the user relationship to ensure it's available
+        $event->reward->load('recipients.user');
+
         $event->reward->recipients->each(function ($recipient) use ($event) {
             $recipient->update([
                 'status' => RecipientStatus::Notified,
@@ -19,7 +22,10 @@ class NotifyRecipientsOnRewardApproval
 
             app(PaymentPostingService::class)->postReward($recipient);
 
-            $recipient->user?->notify(new RewardNotification($event->reward, $recipient));
+            // Only send notification if recipient has a user account (internal recipient)
+            if ($recipient->user) {
+                $recipient->user->notify(new RewardNotification($event->reward, $recipient));
+            }
         });
     }
 }

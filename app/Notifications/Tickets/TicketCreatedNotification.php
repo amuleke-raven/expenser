@@ -29,7 +29,7 @@ class TicketCreatedNotification extends Notification implements ShouldQueue
             ->line("A new support ticket has been submitted by {$this->ticket->requester->name}.")
             ->line("Category: {$this->ticket->category->name}")
             ->line("Priority: {$this->ticket->priority->label()}")
-            ->action('View Ticket', url("/it/tickets/{$this->ticket->id}"));
+            ->action('View Ticket', route('filament.it.resources.tickets.view', $this->ticket));
     }
 
     /**

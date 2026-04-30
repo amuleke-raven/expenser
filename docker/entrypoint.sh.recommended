@@ -1,0 +1,90 @@
+#!/bin/sh
+set -e
+
+# Generate app key if not set
+if [ -z "$APP_KEY" ]; then
+    php artisan key:generate --force
+fi
+
+# Discover packages (skipped during build to avoid missing .env errors)
+php artisan package:discover --ansi
+
+# Ensure SQLite database file exists
+if [ "$DB_CONNECTION" = "sqlite" ]; then
+    DB_PATH="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
+    mkdir -p "$(dirname "$DB_PATH")"
+    if [ ! -f "$DB_PATH" ]; then
+        touch "$DB_PATH"
+    fi
+    chown www-data:www-data "$DB_PATH"
+fi
+
+# Run migrations
+php artisan migrate --force
+
+# Database seeding logic
+# Controlled by environment variables:
+# - DB_SEED=true/false (default: true for non-production, false for production)
+# - DB_SEED_FORCE=true (force reseed even if already seeded)
+# - DB_SEEDER_CLASS (optional: specific seeder class to run)
+
+DB_SEED_DEFAULT="true"
+if [ "$APP_ENV" = "production" ]; then
+    DB_SEED_DEFAULT="false"
+fi
+
+DB_SEED="${DB_SEED:-$DB_SEED_DEFAULT}"
+SEED_FLAG_FILE="/var/www/html/storage/.db_seeded"
+
+if [ "$DB_SEED" = "true" ]; then
+    # Check if force reseed is requested
+    if [ "$DB_SEED_FORCE" = "true" ]; then
+        echo "=== Force reseeding database (DB_SEED_FORCE=true) ==="
+        rm -f "$SEED_FLAG_FILE"
+    fi
+
+    # Seed database only on first run (unless forced)
+    if [ ! -f "$SEED_FLAG_FILE" ]; then
+        echo "=== Seeding database with test data ==="
+
+        if [ -n "$DB_SEEDER_CLASS" ]; then
+            echo "Running specific seeder: $DB_SEEDER_CLASS"
+            php artisan db:seed --class="$DB_SEEDER_CLASS" --force
+        else
+            echo "Running all seeders (DatabaseSeeder)"
+            php artisan db:seed --force
+        fi
+
+        # Create flag file to mark database as seeded
+        touch "$SEED_FLAG_FILE"
+        echo "✓ Database seeded successfully (flag created: $SEED_FLAG_FILE)"
+        echo "  To reseed on next deployment, set DB_SEED_FORCE=true"
+    else
+        echo "Database already seeded - skipping (flag file exists: $SEED_FLAG_FILE)"
+        echo "  To reseed, set DB_SEED_FORCE=true or delete $SEED_FLAG_FILE"
+    fi
+else
+    echo "Database seeding disabled (DB_SEED=$DB_SEED)"
+fi
+
+# Create public storage symlink for file uploads
+php artisan storage:link --force
+
+# Cache configuration for production
+if [ "$APP_ENV" = "production" ]; then
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    echo "Production caches built"
+fi
+
+# Fix permissions for storage and cache directories
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+find /var/www/html/storage -type d -exec chmod 775 {} \;
+find /var/www/html/storage -type f -exec chmod 664 {} \;
+find /var/www/html/bootstrap/cache -type d -exec chmod 775 {} \;
+find /var/www/html/bootstrap/cache -type f -exec chmod 664 {} \;
+
+echo "Entrypoint setup complete - starting application..."
+
+exec "$@"

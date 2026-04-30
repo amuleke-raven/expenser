@@ -13,15 +13,16 @@ use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Spatie\Permission\Models\Role;
-use Filament\Schemas\Components\Section;
 
 class ExpenseResource extends Resource
 {
@@ -54,6 +55,9 @@ class ExpenseResource extends Resource
                 ->color(fn (ExpenseStatus $state): string => $state->color()),
             TextEntry::make('total_amount')->money()->label('Total'),
             TextEntry::make('submitted_at')->dateTime()->label('Submitted'),
+            IconEntry::make('is_billable')
+                ->label('Billable')
+                ->boolean(),
             TextEntry::make('rejection_reason')
                 ->label('Rejection Reason')
                 ->visible(fn ($record) => $record?->status === ExpenseStatus::Rejected),
@@ -93,6 +97,10 @@ class ExpenseResource extends Resource
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (ExpenseStatus $state): string => $state->color()),
+
+                IconColumn::make('is_billable')
+                    ->label('Billable')
+                    ->boolean(),
 
                 TextColumn::make('submitted_at')
                     ->dateTime()

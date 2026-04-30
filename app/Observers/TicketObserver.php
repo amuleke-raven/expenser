@@ -25,15 +25,31 @@ class TicketObserver
 
     public function updating(Ticket $ticket): void
     {
-        if ($ticket->isDirty('status') && $ticket->status === TicketStatus::Resolved) {
-            $ticket->resolved_at = now();
+        if ($ticket->isDirty('status')) {
+            if ($ticket->status === TicketStatus::Resolved) {
+                $ticket->resolved_at = now();
+            }
+
+            if ($ticket->status === TicketStatus::Open) {
+                $ticket->sla_breach_notified = false;
+            }
+        }
+
+        $actor = auth()->user();
+        if (
+            $ticket->first_response_at === null
+            && $actor !== null
+            && $actor->id !== $ticket->requester_id
+            && $actor->hasAnyRole(['it_staff', 'admin', 'super_admin'])
+        ) {
+            $ticket->first_response_at = now();
         }
     }
 
     public function updated(Ticket $ticket): void
     {
         if ($ticket->wasChanged('status')) {
-            $from = TicketStatus::from($ticket->getOriginal('status'));
+            $from = TicketStatus::from($ticket->getRawOriginal('status'));
             $to = $ticket->status;
 
             app()->make(TicketActivityLogger::class)->log($ticket, 'status_changed', [
