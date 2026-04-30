@@ -47,6 +47,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         bcmath \
         exif \
         opcache \
+	fileinfo \
     && apk add --no-cache sqlite-dev \
     && docker-php-ext-install pdo_sqlite
 
