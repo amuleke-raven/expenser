@@ -1,0 +1,50 @@
+# Development Docker Compose Override
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  app:
+    build:
+      target: app
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      LOG_LEVEL: debug
+
+      # Enable database seeding for development (loads test data)
+      DB_SEED: "true"
+      DB_SEED_FORCE: "${DB_SEED_FORCE:-false}"
+
+      # Development OPcache settings (allow code changes without restart)
+      OPCACHE_VALIDATE_TIMESTAMPS: "1"
+      OPCACHE_REVALIDATE_FREQ: "2"
+
+      # Use SQLite for faster local development
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/html/database/database.sqlite
+
+      # Optional: Use database for cache/queue in development
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+
+    volumes:
+      # Mount source code for live editing
+      - .:/var/www/html
+      # Exclude vendor and node_modules for performance
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+    ports:
+      - "${APP_PORT:-8183}:80"
+
+  # Optional: MailHog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - app-network
+
+  # Override to disable Redis in development (optional)
+  # redis:
+  #   profiles:
+  #     - with-redis

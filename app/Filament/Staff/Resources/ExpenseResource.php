@@ -15,10 +15,12 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
-// use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
+// use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
@@ -27,6 +29,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -87,6 +90,10 @@ class ExpenseResource extends Resource
                     Textarea::make('description')
                         ->nullable()
                         ->columnSpanFull(),
+
+                    Toggle::make('is_billable')
+                        ->label('Billable')
+                        ->default(false),
 
                     Repeater::make('lineItems')
                         ->relationship('lineItems')
@@ -161,6 +168,9 @@ class ExpenseResource extends Resource
                 TextEntry::make('status')
                     ->badge()
                     ->color(fn (ExpenseStatus $state): string => $state->color()),
+                IconEntry::make('is_billable')
+                    ->label('Billable')
+                    ->boolean(),
                 TextEntry::make('description')->columnSpanFull(),
                 TextEntry::make('submitted_at')->dateTime()->label('Submitted'),
 
@@ -195,6 +205,10 @@ class ExpenseResource extends Resource
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (ExpenseStatus $state): string => $state->color()),
+
+                IconColumn::make('is_billable')
+                    ->label('Billable')
+                    ->boolean(),
 
                 TextColumn::make('submitted_at')->dateTime()->label('Submitted'),
             ])

@@ -21,7 +21,7 @@ class RewardsSheet implements FromCollection, WithColumnWidths, WithHeadings, Wi
 
     public function title(): string
     {
-        return 'Rewards';
+        return 'Disbursements';
     }
 
     /**
@@ -30,8 +30,8 @@ class RewardsSheet implements FromCollection, WithColumnWidths, WithHeadings, Wi
     public function headings(): array
     {
         return [
-            'No.', 'Reward Ref', 'Project', 'Staff', 'Email',
-            'Reward Type', 'Amount (Local)', 'Total (USD)',
+            'No.', 'Disbursement Ref', 'Project', 'Staff', 'Email',
+            'Disbursement Type', 'Amount (Local)', 'Total (USD)',
             'Payment Method', 'Status',
         ];
     }
@@ -129,10 +129,10 @@ class RewardsSheet implements FromCollection, WithColumnWidths, WithHeadings, Wi
             $query->where('currency_id', $this->filters['currency_id']);
         }
         if (! empty($this->filters['project_id'])) {
-            $query->whereHas('payable.reward', fn ($q) => $q->where('project_id', $this->filters['project_id']));
+            $query->whereHasMorph('payable', [RewardRecipient::class], fn ($q) => $q->whereHas('reward', fn ($rq) => $rq->where('project_id', $this->filters['project_id'])));
         }
         if (! empty($this->filters['status'])) {
-            $query->whereHas('payable.reward', fn ($q) => $q->where('status', $this->filters['status']));
+            $query->whereHasMorph('payable', [RewardRecipient::class], fn ($q) => $q->whereHas('reward', fn ($rq) => $rq->where('status', $this->filters['status'])));
         }
         if (! empty($this->filters['payment_method_type'])) {
             $query->whereHas('paymentMethod', fn ($q) => $q->where('type', $this->filters['payment_method_type']));

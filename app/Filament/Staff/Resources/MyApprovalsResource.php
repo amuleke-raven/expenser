@@ -85,12 +85,12 @@ class MyApprovalsResource extends Resource
                     ->badge()
                     ->getStateUsing(fn (WorkflowStepAction $record): string => match (true) {
                         $record->modelHasWorkflow?->workflowable instanceof Expense => 'Expense',
-                        $record->modelHasWorkflow?->workflowable instanceof Reward => 'Reward',
+                        $record->modelHasWorkflow?->workflowable instanceof Reward => 'Disbursement',
                         default => 'Unknown',
                     })
                     ->color(fn ($state) => match ($state) {
                         'Expense' => 'info',
-                        'Reward' => 'success',
+                        'Disbursement' => 'success',
                         default => 'gray',
                     }),
 

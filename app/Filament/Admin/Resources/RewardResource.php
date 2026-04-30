@@ -8,6 +8,7 @@ use App\Enums\StepActionStatus;
 use App\Events\RewardApproved;
 use App\Events\RewardInitiated;
 use App\Filament\Admin\Resources\RewardResource\Pages;
+use App\Filament\Admin\Resources\RewardResource\RelationManagers\RewardAttachmentsRelationManager;
 use App\Filament\Admin\Resources\RewardResource\RelationManagers\RewardRecipientsRelationManager;
 use App\Models\Currency;
 use App\Models\Project;
@@ -18,14 +19,17 @@ use App\Models\User;
 use App\Services\WorkflowEngine;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -34,23 +38,23 @@ class RewardResource extends Resource
 {
     protected static ?string $model = Reward::class;
 
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-star';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-gift';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Rewards';
+    protected static string|\UnitEnum|null $navigationGroup = 'Disbursements';
 
-    protected static ?string $modelLabel = 'Reward';
+    protected static ?string $modelLabel = 'Disbursement';
 
-    protected static ?string $pluralModelLabel = 'Rewards';
+    protected static ?string $pluralModelLabel = 'Disbursements';
 
     protected static ?string $recordTitleAttribute = 'ref';
 
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Section::make('Reward Details')
+            Section::make('Disbursement Details')
                 ->schema([
                     Select::make('reward_type_id')
-                        ->label('Reward Type')
+                        ->label('Disbursement Type')
                         ->options(RewardType::query()->pluck('name', 'id'))
                         ->required()
                         ->searchable()
@@ -102,6 +106,30 @@ class RewardResource extends Resource
                         ->nullable(),
 
                     Textarea::make('notes')->nullable()->columnSpanFull(),
+
+                    Textarea::make('custom_message')
+                        ->label('Custom Message for Recipients')
+                        ->helperText('This personalized message will be sent to all recipients as an in-app notification')
+                        ->nullable()
+                        ->columnSpanFull()
+                        ->visible(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->allows_custom_message)
+                        ->rows(4),
+
+                    FileUpload::make('attachment_files')
+                        ->label('Attachments')
+                        ->multiple()
+                        ->acceptedFileTypes(config('remoteraven.supported_attachment_mimes'))
+                        ->maxSize(config('remoteraven.max_attachment_size_mb') * 1024)
+                        ->visibility('public')
+                        ->disk('public')
+                        ->directory('reward-attachments')
+                        ->visible(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->requires_attachments)
+                        ->required(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->requires_attachments)
+                        ->columnSpanFull(),
+
+                    Toggle::make('is_billable')
+                        ->label('Billable')
+                        ->default(false),
                 ])->columnSpanFull(),
         ]);
     }
@@ -120,6 +148,10 @@ class RewardResource extends Resource
                     ->badge()
                     ->color(fn (RewardStatus $state): string => $state->color()),
                 TextColumn::make('project.name')->label('Project'),
+                IconColumn::make('is_billable')
+                    ->label('Billable')
+                    ->boolean(),
+
                 TextColumn::make('payout_date')
                     ->label('Payout Date')
                     ->date()
@@ -256,6 +288,7 @@ class RewardResource extends Resource
     {
         return [
             RewardRecipientsRelationManager::class,
+            RewardAttachmentsRelationManager::class,
         ];
     }
 

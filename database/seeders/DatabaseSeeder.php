@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             PaymentMethodSeeder::class,
             ExpenseGroupSeeder::class,
             WorkflowSeeder::class,
+            RewardTypeSeeder::class,
             TicketConfigSeeder::class,
         ]);
 

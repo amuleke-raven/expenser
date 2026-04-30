@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Reward;
 use App\Models\RewardRecipient;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -27,10 +28,17 @@ class RewardNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('You have received a reward')
+        $message = (new MailMessage)
+            ->subject('You have received a disbursement')
             ->line("Type: {$this->reward->rewardType->name}")
             ->line("Amount: {$this->reward->currency->symbol}{$this->reward->amount}");
+
+        if ($this->reward->custom_message) {
+            $message->line('')
+                ->line($this->reward->custom_message);
+        }
+
+        return $message;
     }
 
     /**
@@ -38,10 +46,22 @@ class RewardNotification extends Notification
      */
     public function toDatabase(object $notifiable): array
     {
-        return [
-            'reward_id' => $this->reward->id,
-            'ref' => $this->reward->ref(),
-            'type' => 'reward_received',
-        ];
+        // Build notification body
+        $body = "**Disbursement:** {$this->reward->ref()}\n\n";
+        $body .= "**Type:** {$this->reward->rewardType->name}\n\n";
+        $body .= "**Amount:** {$this->reward->currency->symbol}{$this->reward->amount}";
+
+        // Add custom message if present
+        if ($this->reward->custom_message) {
+            $body .= "\n\n---\n\n";
+            $body .= $this->reward->custom_message;
+        }
+
+        return FilamentNotification::make()
+            ->title('You have received a disbursement')
+            ->icon('heroicon-o-gift')
+            ->iconColor('success')
+            ->body($body)
+            ->getDatabaseMessage();
     }
 }

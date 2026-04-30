@@ -21,6 +21,7 @@ class Expense extends Model
         'currency_id',
         'total_amount',
         'description',
+        'is_billable',
         'status',
         'submitted_at',
         'approved_at',
@@ -32,6 +33,7 @@ class Expense extends Model
     {
         return [
             'status' => ExpenseStatus::class,
+            'is_billable' => 'boolean',
             'total_amount' => 'decimal:2',
             'submitted_at' => 'datetime',
             'approved_at' => 'datetime',

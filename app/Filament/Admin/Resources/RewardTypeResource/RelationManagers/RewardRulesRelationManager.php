@@ -18,7 +18,7 @@ class RewardRulesRelationManager extends RelationManager
 {
     protected static string $relationship = 'rules';
 
-    protected static ?string $title = 'Reward Rules';
+    protected static ?string $title = 'Disbursement Rules';
 
     public function form(Schema $schema): Schema
     {

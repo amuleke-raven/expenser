@@ -6,6 +6,7 @@ use App\Enums\PaymentMethodType;
 use App\Exports\PaymentRunExport;
 use App\Models\Currency;
 use App\Models\Project;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
@@ -13,9 +14,8 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
-use Maatwebsite\Excel\Facades\Excel;
 use Filament\Support\Icons\Heroicon;
-use Filament\Actions\Action;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PaymentRunReportPage extends Page implements HasForms
 {
@@ -64,31 +64,31 @@ class PaymentRunReportPage extends Page implements HasForms
                         }),
                 ])
                 ->schema([
-                DatePicker::make('filters.date_from')->label('Date From'),
-                DatePicker::make('filters.date_to')->label('Date To'),
-                Select::make('filters.project_id')
-                    ->label('Project')
-                    ->options(Project::query()->pluck('name', 'id'))
-                    ->searchable()
-                    ->nullable(),
-                Select::make('filters.currency_id')
-                    ->label('Currency')
-                    ->options(Currency::query()->pluck('code', 'id'))
-                    ->searchable()
-                    ->nullable(),
-                Select::make('filters.payment_method_type')
-                    ->label('Payment Method Type')
-                    ->options(collect(PaymentMethodType::cases())->mapWithKeys(
-                        fn ($case) => [$case->value => $case->label()]
-                    ))
-                    ->nullable(),
-                Select::make('filters.status')
-                    ->label('Status')
-                    ->options(['approved' => 'Approved', 'paid' => 'Paid'])
-                    ->default('approved'),
-                Toggle::make('filters.include_expenses')->label('Include Expenses')->default(true),
-                Toggle::make('filters.include_rewards')->label('Include Rewards')->default(true),
-            ])->columns(2),
+                    DatePicker::make('filters.date_from')->label('Date From'),
+                    DatePicker::make('filters.date_to')->label('Date To'),
+                    Select::make('filters.project_id')
+                        ->label('Project')
+                        ->options(Project::query()->pluck('name', 'id'))
+                        ->searchable()
+                        ->nullable(),
+                    Select::make('filters.currency_id')
+                        ->label('Currency')
+                        ->options(Currency::query()->pluck('code', 'id'))
+                        ->searchable()
+                        ->nullable(),
+                    Select::make('filters.payment_method_type')
+                        ->label('Payment Method Type')
+                        ->options(collect(PaymentMethodType::cases())->mapWithKeys(
+                            fn ($case) => [$case->value => $case->label()]
+                        ))
+                        ->nullable(),
+                    Select::make('filters.status')
+                        ->label('Status')
+                        ->options(['approved' => 'Approved', 'paid' => 'Paid'])
+                        ->default('approved'),
+                    Toggle::make('filters.include_expenses')->label('Include Expenses')->default(true),
+                    Toggle::make('filters.include_rewards')->label('Include Disbursements')->default(true),
+                ])->columns(2),
 
         ];
     }
