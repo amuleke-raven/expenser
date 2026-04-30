@@ -35,7 +35,8 @@ if [ "$APP_ENV" = "production" ]; then
     php artisan view:cache
     echo "Production caches built"
 fi
-
+#fix filament assets
+php artisan livewire:publish --assets
 # Fix permissions for storage and cache directories
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 find /var/www/html/storage -type d -exec chmod 775 {} \;
