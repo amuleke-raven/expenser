@@ -9,7 +9,8 @@ RUN npm install
 COPY resources/ resources/
 COPY vite.config.js ./
 COPY public/ public/
-
+COPY database/seeders database/seeders
+##
 RUN npm run build
 
 # Stage 2: PHP application
@@ -26,6 +27,7 @@ RUN apk add --no-cache \
     freetype-dev \
     libzip-dev \
     icu-dev \
+    nano \
     oniguruma-dev \
     libxml2-dev \
     curl-dev \
