@@ -25,6 +25,9 @@ php artisan migrate --force
 # Database seeding logic
 echo "Seeding database..."
 php artisan db:seed --force
+# Ensure the public storage target exists (volume mount may shadow the image's directory)
+mkdir -p /var/www/html/storage/app/public
+
 # Create public storage symlink for file uploads
 php artisan storage:link --force
 
