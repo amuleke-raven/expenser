@@ -7,6 +7,7 @@ use App\Filament\Admin\Resources\ExpenseTypeResource\RelationManagers\ExpenseRul
 use App\Models\ExpenseGroup;
 use App\Models\ExpenseType;
 use App\Models\Workflow;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -92,6 +93,9 @@ class ExpenseTypeResource extends Resource
 
                 TextColumn::make('workflow.name')
                     ->label('Workflow'),
+            ])
+            ->bulkActions([
+                DeleteBulkAction::make(),
             ]);
     }
 
