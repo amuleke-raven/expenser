@@ -16,6 +16,7 @@ class CurrencySeeder extends Seeder
             ['code' => 'EUR', 'name' => 'Euro',            'symbol' => '€',  'is_base' => false, 'conversion_rate' => 0.92],
             ['code' => 'AED', 'name' => 'UAE Dirham',      'symbol' => 'AED', 'is_base' => false, 'conversion_rate' => 3.67],
             ['code' => 'INR', 'name' => 'Indian Rupee',    'symbol' => '₹',  'is_base' => false, 'conversion_rate' => 83.5],
+            ['code' => 'PHP', 'name' => 'Philippine Peso', 'symbol' => '₱',  'is_base' => false, 'conversion_rate' => 56.0],
         ];
 
         foreach ($currencies as $currency) {

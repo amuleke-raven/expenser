@@ -22,6 +22,8 @@ class TicketKanbanPage extends Page
 
     protected static ?string $slug = 'tickets/kanban';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     /** @var array<string, list<array<string, mixed>>> */
     public array $columns = [];
 

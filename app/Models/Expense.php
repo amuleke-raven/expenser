@@ -16,6 +16,7 @@ class Expense extends Model
 
     protected $fillable = [
         'user_id',
+        'raised_by',
         'expense_type_id',
         'project_id',
         'currency_id',
@@ -44,6 +45,11 @@ class Expense extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function raisedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'raised_by');
     }
 
     public function expenseType(): BelongsTo

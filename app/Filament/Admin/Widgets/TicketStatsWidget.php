@@ -9,6 +9,11 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class TicketStatsWidget extends StatsOverviewWidget
 {
+    public static function canView(): bool
+    {
+        return false;
+    }
+
     protected function getStats(): array
     {
         $totalOpen = Ticket::query()

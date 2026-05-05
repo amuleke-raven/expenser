@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\ExpenseGroupResource\RelationManagers;
 
+use App\Models\ExpenseType;
 use App\Models\Workflow;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -10,6 +11,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -49,6 +51,20 @@ class ExpenseTypesRelationManager extends RelationManager
                 TextColumn::make('workflow.name')->label('Workflow'),
             ])
             ->headerActions([CreateAction::make()])
-            ->actions([EditAction::make(), DeleteAction::make()]);
+            ->actions([
+                EditAction::make(),
+                DeleteAction::make()
+                    ->before(function (DeleteAction $action, ExpenseType $record): void {
+                        if ($record->expenses()->exists()) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Cannot delete expense type')
+                                ->body('This expense type has associated expenses. Remove or reassign them first.')
+                                ->send();
+
+                            $action->halt();
+                        }
+                    }),
+            ]);
     }
 }

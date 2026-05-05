@@ -9,6 +9,7 @@ enum RewardStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Paid = 'paid';
+    case PendingResubmission = 'pending_resubmission';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum RewardStatus: string
             self::Approved => 'Approved',
             self::Rejected => 'Rejected',
             self::Paid => 'Paid',
+            self::PendingResubmission => 'Pending Resubmission',
         };
     }
 
@@ -29,6 +31,7 @@ enum RewardStatus: string
             self::Approved => 'success',
             self::Rejected => 'danger',
             self::Paid => 'success',
+            self::PendingResubmission => 'warning',
         };
     }
 }

@@ -26,6 +26,8 @@ class SLAPolicyResource extends Resource
 
     protected static ?string $pluralModelLabel = 'SLA Policies';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([

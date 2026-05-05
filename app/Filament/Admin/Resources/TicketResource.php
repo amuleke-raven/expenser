@@ -39,6 +39,8 @@ class TicketResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Tickets';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $recordTitleAttribute = 'ticket_number';
 
     public static function infolist(Schema $schema): Schema

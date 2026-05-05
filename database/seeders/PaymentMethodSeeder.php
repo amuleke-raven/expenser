@@ -47,7 +47,6 @@ class PaymentMethodSeeder extends Seeder
             'admin@remoteraven.com',
             'manager@remoteraven.com',
             'accountant@remoteraven.com',
-            'backoffice@remoteraven.com',
         ];
 
         foreach ($otherEmails as $email) {

@@ -7,6 +7,7 @@ use App\Enums\StepActionStatus;
 use App\Filament\Admin\Resources\MyApprovalsResource\Pages;
 use App\Models\Expense;
 use App\Models\Reward;
+use App\Models\User;
 use App\Models\WorkflowStep;
 use App\Models\WorkflowStepAction;
 use App\Services\WorkflowEngine;
@@ -36,7 +37,13 @@ class MyApprovalsResource extends Resource
 
     public static function canAccess(): bool
     {
-        $userRoleIds = auth()->user()?->roles->pluck('id') ?? collect();
+        $user = auth()->user();
+
+        if ($user?->hasRole('super_admin')) {
+            return true;
+        }
+
+        $userRoleIds = $user?->roles->pluck('id') ?? collect();
 
         if ($userRoleIds->isEmpty()) {
             return false;
@@ -47,9 +54,10 @@ class MyApprovalsResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $user = auth()->user();
+
+        $baseQuery = fn () => parent::getEloquentQuery()
             ->where('workflow_step_actions.status', StepActionStatus::Pending)
-            ->whereHas('workflowStep', fn ($q) => $q->whereIn('role_id', auth()->user()->roles->pluck('id')))
             ->whereExists(fn (QueryBuilder $q) => $q
                 ->from('model_has_workflows')
                 ->join('workflow_steps', fn ($j) => $j
@@ -60,6 +68,34 @@ class MyApprovalsResource extends Resource
                 ->whereColumn('workflow_steps.id', 'workflow_step_actions.workflow_step_id')
             )
             ->with(['workflowStep', 'modelHasWorkflow.workflowable']);
+
+        if ($user->hasRole('super_admin')) {
+            return $baseQuery();
+        }
+
+        return $baseQuery()
+            ->whereHas('workflowStep', fn ($q) => $q->whereIn('role_id', $user->roles->pluck('id')))
+            ->when($user->hasRole('manager'), function (Builder $query) use ($user) {
+                $departmentId = $user->department_id;
+
+                if (! $departmentId) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $deptUserIds = User::where('department_id', $departmentId)->select('id');
+
+                $query->whereHas('modelHasWorkflow', function ($q) use ($deptUserIds) {
+                    $q->where(function ($inner) use ($deptUserIds) {
+                        $inner->where('workflowable_type', Expense::class)
+                            ->whereIn('workflowable_id', Expense::query()->whereIn('user_id', $deptUserIds)->select('id'));
+                    })->orWhere(function ($inner) use ($deptUserIds) {
+                        $inner->where('workflowable_type', Reward::class)
+                            ->whereIn('workflowable_id', Reward::query()->whereIn('initiated_by', $deptUserIds)->select('id'));
+                    });
+                });
+            });
     }
 
     public static function form(Schema $schema): Schema
@@ -190,6 +226,7 @@ class MyApprovalsResource extends Resource
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
+                    ->hidden(fn (): bool => auth()->user()->hasRole('super_admin'))
                     ->form([
                         Textarea::make('notes')->nullable()->label('Notes'),
                     ])
@@ -202,6 +239,29 @@ class MyApprovalsResource extends Resource
                         );
 
                         Notification::make()->title('Approved')->success()->send();
+
+                        $livewire->resetTable();
+                    }),
+
+                Action::make('superApprove')
+                    ->label('Force Approve')
+                    ->icon('heroicon-o-shield-check')
+                    ->color('success')
+                    ->visible(fn (): bool => auth()->user()->hasRole('super_admin'))
+                    ->requiresConfirmation()
+                    ->modalHeading('Force Approve')
+                    ->modalDescription('This will bypass all remaining approval steps and immediately mark this as approved.')
+                    ->form([
+                        Textarea::make('notes')->nullable()->label('Notes'),
+                    ])
+                    ->action(function (WorkflowStepAction $record, array $data, $livewire) {
+                        app(WorkflowEngine::class)->superApprove(
+                            $record,
+                            $data['notes'] ?? null,
+                            auth()->user()
+                        );
+
+                        Notification::make()->title('Force approved — all steps bypassed')->success()->send();
 
                         $livewire->resetTable();
                     }),

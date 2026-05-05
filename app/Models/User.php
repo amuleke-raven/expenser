@@ -29,6 +29,7 @@ class User extends Authenticatable implements FilamentUser
         'country_id',
         'currency_id',
         'default_project_id',
+        'department_id',
     ];
 
     /**
@@ -51,10 +52,15 @@ class User extends Authenticatable implements FilamentUser
     {
         return match ($panel->getId()) {
             'admin' => $this->can('access_admin_panel'),
-            'staff' => $this->can('access_staff_panel'),
+            'staff' => true,
             'it' => $this->hasAnyRole(['it_staff', 'admin', 'super_admin']),
             default => false,
         };
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function country(): BelongsTo

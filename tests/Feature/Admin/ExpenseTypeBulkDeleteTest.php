@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Filament\Admin\Resources\ExpenseTypeResource\Pages\ListExpenseTypes;
+use App\Models\Expense;
 use App\Models\ExpenseType;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -60,5 +61,35 @@ class ExpenseTypeBulkDeleteTest extends TestCase
         }
 
         $this->assertDatabaseHas(ExpenseType::class, ['id' => $toKeep->id]);
+    }
+
+    public function test_bulk_delete_skips_expense_types_with_associated_expenses(): void
+    {
+        $safeType = ExpenseType::factory()->create();
+        $linkedType = ExpenseType::factory()->create();
+        Expense::factory()->create(['expense_type_id' => $linkedType->id]);
+
+        $this->actingAs($this->admin);
+
+        Livewire::test(ListExpenseTypes::class)
+            ->callTableBulkAction('delete', collect([$safeType, $linkedType]));
+
+        $this->assertDatabaseMissing(ExpenseType::class, ['id' => $safeType->id]);
+        $this->assertDatabaseHas(ExpenseType::class, ['id' => $linkedType->id]);
+    }
+
+    public function test_bulk_delete_of_all_types_with_expenses_deletes_nothing(): void
+    {
+        $expenseTypes = ExpenseType::factory()->count(2)->create();
+        $expenseTypes->each(fn ($type) => Expense::factory()->create(['expense_type_id' => $type->id]));
+
+        $this->actingAs($this->admin);
+
+        Livewire::test(ListExpenseTypes::class)
+            ->callTableBulkAction('delete', $expenseTypes);
+
+        foreach ($expenseTypes as $type) {
+            $this->assertDatabaseHas(ExpenseType::class, ['id' => $type->id]);
+        }
     }
 }

@@ -19,7 +19,7 @@ class CountrySeeder extends Seeder
             ['name' => 'Australia',    'iso_code' => 'AU'],
             ['name' => 'South Africa', 'iso_code' => 'ZA'],
             ['name' => 'India',        'iso_code' => 'IN'],
-            ['name' => 'Nigeria',      'iso_code' => 'NG'],
+            ['name' => 'Philippines', 'iso_code' => 'PH'],
         ];
 
         foreach ($countries as $country) {

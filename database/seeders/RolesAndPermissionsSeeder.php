@@ -24,13 +24,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_reports',
             'access_admin_panel',
             'access_staff_panel',
+            'create-backoffice-expenses',
         ];
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
         }
 
-        $roles = ['super_admin', 'admin', 'manager', 'staff', 'accountant', 'backoffice'];
+        $roles = ['super_admin', 'admin', 'manager', 'staff', 'accountant'];
 
         foreach ($roles as $role) {
             Role::firstOrCreate(['name' => $role]);
@@ -38,7 +39,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         Role::findByName('super_admin')->givePermissionTo(Permission::all());
 
-        foreach (['admin', 'accountant', 'backoffice'] as $role) {
+        foreach (['admin', 'accountant'] as $role) {
             Role::findByName($role)->givePermissionTo('access_admin_panel');
         }
 
@@ -46,8 +47,6 @@ class RolesAndPermissionsSeeder extends Seeder
             Role::findByName($role)->givePermissionTo('access_staff_panel');
         }
 
-        foreach (['admin', 'backoffice'] as $role) {
-            Role::findByName($role)->givePermissionTo('approve_rewards');
-        }
+        Role::findByName('admin')->givePermissionTo('approve_rewards');
     }
 }

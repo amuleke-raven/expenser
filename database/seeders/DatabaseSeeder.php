@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             CurrencySeeder::class,
             ProjectSeeder::class,
             RolesAndPermissionsSeeder::class,
+            DepartmentSeeder::class,
             UserSeeder::class,
             PaymentMethodSeeder::class,
             ExpenseGroupSeeder::class,

@@ -5,7 +5,6 @@ namespace App\Listeners;
 use App\Enums\ExpenseStatus;
 use App\Enums\RewardStatus;
 use App\Enums\StepActionStatus;
-use App\Events\ExpenseRejected;
 use App\Events\WorkflowRejected;
 use App\Models\Expense;
 use App\Models\Reward;
@@ -31,17 +30,16 @@ class HandleWorkflowRejected
     private function handleExpense(Expense $expense, ?string $rejectionReason): void
     {
         $expense->update([
-            'status' => ExpenseStatus::Rejected,
+            'status' => ExpenseStatus::PendingResubmission,
             'rejected_at' => now(),
             'rejection_reason' => $rejectionReason,
         ]);
-        event(new ExpenseRejected($expense));
     }
 
     private function handleReward(Reward $reward): void
     {
         $reward->update([
-            'status' => RewardStatus::Rejected,
+            'status' => RewardStatus::PendingResubmission,
             'rejected_at' => now(),
         ]);
     }

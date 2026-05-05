@@ -133,12 +133,83 @@ class WorkflowEngine
             }
 
             if ($decision === StepActionStatus::Rejected) {
-                $mhw->update([
-                    'status' => WorkflowStatus::Cancelled,
-                    'completed_at' => now(),
-                ]);
+                $mhw->update(['status' => WorkflowStatus::AwaitingResubmission]);
                 event(new WorkflowRejected($mhw));
             }
+        });
+    }
+
+    public function resubmit(ModelHasWorkflow $mhw, User $submitter, ?string $comment): void
+    {
+        DB::transaction(function () use ($mhw, $submitter, $comment) {
+            $mhw->load('workflow.steps');
+
+            $firstStep = $mhw->workflow->steps->sortBy('order')->first();
+
+            WorkflowStepAction::create([
+                'model_has_workflow_id' => $mhw->id,
+                'workflow_step_id' => $firstStep->id,
+                'actor_id' => $submitter->id,
+                'status' => StepActionStatus::Resubmitted,
+                'notes' => $comment,
+                'actioned_at' => now(),
+            ]);
+
+            $mhw->update([
+                'current_step' => $firstStep->order,
+                'status' => WorkflowStatus::InProgress,
+                'completed_at' => null,
+            ]);
+
+            $newAction = WorkflowStepAction::create([
+                'model_has_workflow_id' => $mhw->id,
+                'workflow_step_id' => $firstStep->id,
+                'status' => StepActionStatus::Pending,
+            ]);
+
+            $roleName = Role::find($firstStep->role_id)?->name ?? '';
+            if ($roleName) {
+                $actors = User::role($roleName)->get();
+                Notification::send($actors, new WorkflowActionRequiredNotification($newAction));
+            }
+
+            event(new WorkflowStepAdvanced($mhw, $newAction));
+        });
+    }
+
+    public function superApprove(WorkflowStepAction $action, ?string $notes, User $actor): void
+    {
+        DB::transaction(function () use ($action, $notes, $actor) {
+            $action->update([
+                'status' => StepActionStatus::Approved,
+                'actor_id' => $actor->id,
+                'notes' => $notes,
+                'actioned_at' => now(),
+            ]);
+
+            $mhw = $action->modelHasWorkflow->load('workflow.steps');
+
+            $remainingSteps = $mhw->workflow->steps
+                ->where('order', '>', $mhw->current_step)
+                ->sortBy('order');
+
+            foreach ($remainingSteps as $step) {
+                WorkflowStepAction::create([
+                    'model_has_workflow_id' => $mhw->id,
+                    'workflow_step_id' => $step->id,
+                    'actor_id' => $actor->id,
+                    'status' => StepActionStatus::Skipped,
+                    'notes' => 'Bypassed by super admin approval',
+                    'actioned_at' => now(),
+                ]);
+            }
+
+            $mhw->update([
+                'status' => WorkflowStatus::Completed,
+                'completed_at' => now(),
+            ]);
+
+            event(new WorkflowCompleted($mhw));
         });
     }
 
