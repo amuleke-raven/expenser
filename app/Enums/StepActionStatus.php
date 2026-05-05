@@ -8,6 +8,7 @@ enum StepActionStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Skipped = 'skipped';
+    case Resubmitted = 'resubmitted';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum StepActionStatus: string
             self::Approved => 'Approved',
             self::Rejected => 'Rejected',
             self::Skipped => 'Skipped',
+            self::Resubmitted => 'Resubmitted',
         };
     }
 
@@ -26,6 +28,7 @@ enum StepActionStatus: string
             self::Approved => 'success',
             self::Rejected => 'danger',
             self::Skipped => 'gray',
+            self::Resubmitted => 'info',
         };
     }
 }

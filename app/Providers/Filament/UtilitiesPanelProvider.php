@@ -27,7 +27,6 @@ class UtilitiesPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
-            ->default()
             ->id('utilities')
             ->path('utilities')
             ->login()

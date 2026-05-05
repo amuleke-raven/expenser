@@ -29,6 +29,8 @@ class PaymentRunReportPage extends Page implements HasForms
 
     protected static ?int $navigationSort = 1;
 
+    protected static ?string $title = 'Payment Run Report';
+
     protected string $view = 'filament.staff.pages.payment-run-report-page';
 
     public ?array $filters = [
@@ -44,7 +46,7 @@ class PaymentRunReportPage extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()->hasAnyRole(['accountant', 'super_admin']);
+        return auth()->user()->hasAnyRole(['admin', 'accountant', 'super_admin']);
     }
 
     protected function getFormSchema(): array

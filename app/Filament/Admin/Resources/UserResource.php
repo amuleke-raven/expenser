@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\UserResource\Pages;
 use App\Models\Country;
 use App\Models\Currency;
+use App\Models\Department;
 use App\Models\Project;
 use App\Models\User;
 use Filament\Actions\Action;
@@ -73,6 +74,11 @@ class UserResource extends Resource
                                 ->options(Currency::query()->pluck('code', 'id'))
                                 ->searchable()
                                 ->nullable(),
+                            Select::make('department_id')
+                                ->label('Department')
+                                ->options(Department::query()->pluck('name', 'id'))
+                                ->searchable()
+                                ->nullable(),
                         ]),
 
                     Tab::make('Roles')
@@ -105,6 +111,7 @@ class UserResource extends Resource
                 TextColumn::make('phone'),
                 TextColumn::make('country.name')->label('Country'),
                 TextColumn::make('currency.code')->label('Currency'),
+                TextColumn::make('department.name')->label('Department'),
                 TextColumn::make('roles.name')
                     ->badge()
                     ->label('Roles'),

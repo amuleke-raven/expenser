@@ -41,6 +41,8 @@ class TicketResource extends Resource
 
     protected static ?string $pluralModelLabel = 'My Tickets';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->forRequester(auth()->user());

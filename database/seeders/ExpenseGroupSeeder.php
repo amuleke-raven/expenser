@@ -17,10 +17,7 @@ class ExpenseGroupSeeder extends Seeder
         );
 
         $types = [
-            ['name' => 'Travel',           'requires_approval' => true,  'requires_attachment' => false],
-            ['name' => 'Meals',            'requires_approval' => false, 'requires_attachment' => false],
-            ['name' => 'Accommodation',    'requires_approval' => true,  'requires_attachment' => false],
-            ['name' => 'Software',         'requires_approval' => false, 'requires_attachment' => false],
+            ['name' => 'Health & Wellness', 'requires_approval' => true,  'requires_attachment' => true],
             ['name' => 'Office Supplies',  'requires_approval' => false, 'requires_attachment' => false],
         ];
 

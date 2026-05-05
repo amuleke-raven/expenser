@@ -11,12 +11,12 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
-use Filament\Schemas\Components\Section;
 
 class TicketCategoryResource extends Resource
 {
@@ -29,6 +29,8 @@ class TicketCategoryResource extends Resource
     protected static ?string $modelLabel = 'Ticket Category';
 
     protected static ?string $pluralModelLabel = 'Ticket Categories';
+
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Schema $schema): Schema
     {

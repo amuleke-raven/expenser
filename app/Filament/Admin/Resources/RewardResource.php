@@ -25,6 +25,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -218,7 +219,7 @@ class RewardResource extends Resource
                 Action::make('add_recipients')
                     ->label('Add Recipients')
                     ->icon('heroicon-o-user-plus')
-                    ->visible(fn (Reward $record): bool => ! in_array($record->status, [RewardStatus::Approved, RewardStatus::Rejected]))
+                    ->visible(fn (Reward $record): bool => ! in_array($record->status, [RewardStatus::Approved, RewardStatus::Rejected, RewardStatus::PendingResubmission]))
                     ->form(fn (Reward $record) => $record->recipient_type === RecipientType::External
                         ? [
                             Repeater::make('recipients')
@@ -274,6 +275,41 @@ class RewardResource extends Resource
                             $record->update(['status' => RewardStatus::Approved]);
                             event(new RewardApproved($record));
                         }
+                    }),
+
+                Action::make('resubmit')
+                    ->label('Resubmit')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('warning')
+                    ->visible(fn (Reward $record): bool => $record->status === RewardStatus::PendingResubmission)
+                    ->modalHeading('Resubmit Disbursement')
+                    ->modalDescription(fn (Reward $record): string => filled($record->rejection_reason)
+                        ? "Rejection reason: {$record->rejection_reason}"
+                        : 'This disbursement was rejected. Add a comment and resubmit for approval.'
+                    )
+                    ->form([
+                        Textarea::make('comment')
+                            ->label('Resubmission Comment')
+                            ->required()
+                            ->placeholder('Explain what has changed or been addressed…'),
+                    ])
+                    ->action(function (Reward $record, array $data, $livewire) {
+                        $mhw = $record->modelHasWorkflow()->first();
+
+                        app(WorkflowEngine::class)->resubmit($mhw, auth()->user(), $data['comment']);
+
+                        $record->update([
+                            'status' => RewardStatus::PendingApproval,
+                            'rejected_at' => null,
+                            'rejection_reason' => null,
+                        ]);
+
+                        Notification::make()
+                            ->title('Disbursement resubmitted successfully')
+                            ->success()
+                            ->send();
+
+                        $livewire->resetTable();
                     }),
             ]);
     }

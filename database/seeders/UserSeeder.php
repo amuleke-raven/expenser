@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Country;
 use App\Models\Currency;
+use App\Models\Department;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -19,6 +20,9 @@ class UserSeeder extends Seeder
         $us = Country::where('iso_code', 'US')->firstOrFail();
         $ke = Country::where('iso_code', 'KE')->firstOrFail();
 
+        $engineering = Department::where('name', 'Engineering')->firstOrFail();
+        $finance = Department::where('name', 'Finance')->firstOrFail();
+
         $users = [
             [
                 'name' => 'Admin',
@@ -27,6 +31,7 @@ class UserSeeder extends Seeder
                 'country_id' => $us->id,
                 'currency_id' => $usd->id,
                 'role' => 'super_admin',
+                'department_id' => null,
             ],
             [
                 'name' => 'Manager',
@@ -35,6 +40,7 @@ class UserSeeder extends Seeder
                 'country_id' => $us->id,
                 'currency_id' => $usd->id,
                 'role' => 'manager',
+                'department_id' => $engineering->id,
             ],
             [
                 'name' => 'Staff',
@@ -43,6 +49,7 @@ class UserSeeder extends Seeder
                 'country_id' => $ke->id,
                 'currency_id' => $kes->id,
                 'role' => 'staff',
+                'department_id' => $engineering->id,
             ],
             [
                 'name' => 'Accountant',
@@ -51,14 +58,7 @@ class UserSeeder extends Seeder
                 'country_id' => $us->id,
                 'currency_id' => $usd->id,
                 'role' => 'accountant',
-            ],
-            [
-                'name' => 'Backoffice',
-                'email' => 'backoffice@remoteraven.com',
-                'password' => Hash::make('password'),
-                'country_id' => $us->id,
-                'currency_id' => $usd->id,
-                'role' => 'backoffice',
+                'department_id' => $finance->id,
             ],
         ];
 
@@ -70,6 +70,8 @@ class UserSeeder extends Seeder
                 ['email' => $userData['email']],
                 array_merge($userData, ['default_project_id' => $defaultProject->id])
             );
+
+            $user->update(['department_id' => $userData['department_id']]);
 
             $user->assignRole($role);
             $user->projects()->syncWithoutDetaching([$defaultProject->id]);

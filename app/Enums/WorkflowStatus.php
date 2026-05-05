@@ -8,6 +8,7 @@ enum WorkflowStatus: string
     case InProgress = 'in_progress';
     case Completed = 'completed';
     case Cancelled = 'cancelled';
+    case AwaitingResubmission = 'awaiting_resubmission';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum WorkflowStatus: string
             self::InProgress => 'In Progress',
             self::Completed => 'Completed',
             self::Cancelled => 'Cancelled',
+            self::AwaitingResubmission => 'Awaiting Resubmission',
         };
     }
 
@@ -26,6 +28,7 @@ enum WorkflowStatus: string
             self::InProgress => 'warning',
             self::Completed => 'success',
             self::Cancelled => 'danger',
+            self::AwaitingResubmission => 'warning',
         };
     }
 }

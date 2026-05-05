@@ -7,15 +7,26 @@ use App\Enums\StepActionStatus;
 use App\Filament\Admin\Resources\ExpenseResource\Pages;
 use App\Filament\Admin\Resources\ExpenseResource\RelationManagers\AttachmentsRelationManager;
 use App\Filament\Admin\Resources\ExpenseResource\RelationManagers\LineItemsRelationManager;
+use App\Models\Currency;
 use App\Models\Expense;
+use App\Models\ExpenseType;
+use App\Models\Project;
+use App\Models\User;
 use App\Services\WorkflowEngine;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -48,6 +59,9 @@ class ExpenseResource extends Resource
         return $schema->schema([
             TextEntry::make('ref')->label('Reference'),
             TextEntry::make('user.name')->label('Staff Member'),
+            TextEntry::make('raisedBy.name')
+                ->label('Raised By')
+                ->visible(fn ($record) => filled($record?->raised_by)),
             TextEntry::make('expenseType.name')->label('Expense Type'),
             TextEntry::make('project.name')->label('Project'),
             TextEntry::make('status')
@@ -60,7 +74,7 @@ class ExpenseResource extends Resource
                 ->boolean(),
             TextEntry::make('rejection_reason')
                 ->label('Rejection Reason')
-                ->visible(fn ($record) => $record?->status === ExpenseStatus::Rejected),
+                ->visible(fn ($record) => in_array($record?->status, [ExpenseStatus::Rejected, ExpenseStatus::PendingResubmission])),
             TextEntry::make('modelHasWorkflow.currentStepModel.name')
                 ->label('Current Workflow Step')
                 ->visible(fn ($record) => $record?->status === ExpenseStatus::UnderReview),
@@ -71,6 +85,125 @@ class ExpenseResource extends Resource
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->headerActions([
+                Action::make('raiseBackofficeExpense')
+                    ->label('Raise Expense on Behalf')
+                    ->icon('heroicon-o-user-plus')
+                    ->color('info')
+                    ->visible(fn (): bool => auth()->user()->can('create-backoffice-expenses'))
+                    ->slideOver()
+                    ->form([
+                        Select::make('user_ids')
+                            ->label('Raise For')
+                            ->helperText('Select one or more staff members. Excludes you.')
+                            ->options(User::query()->where('id', '!=', auth()->id())->orderBy('name')->pluck('name', 'id'))
+                            ->multiple()
+                            ->required()
+                            ->searchable(),
+
+                        Select::make('expense_type_id')
+                            ->label('Expense Type')
+                            ->options(
+                                ExpenseType::query()
+                                    ->with('expenseGroup')
+                                    ->get()
+                                    ->mapWithKeys(fn ($type) => [$type->id => "{$type->expenseGroup->name} — {$type->name}"])
+                            )
+                            ->required()
+                            ->searchable(),
+
+                        Select::make('project_id')
+                            ->label('Project')
+                            ->options(Project::query()->pluck('name', 'id'))
+                            ->searchable()
+                            ->nullable(),
+
+                        Select::make('currency_id')
+                            ->label('Currency')
+                            ->options(Currency::query()->pluck('code', 'id'))
+                            ->required()
+                            ->searchable(),
+
+                        Textarea::make('description')
+                            ->nullable()
+                            ->columnSpanFull(),
+
+                        Toggle::make('is_billable')
+                            ->label('Billable')
+                            ->default(false),
+
+                        Repeater::make('line_items')
+                            ->label('Line Items')
+                            ->schema([
+                                TextInput::make('description')
+                                    ->required()
+                                    ->maxLength(255),
+
+                                TextInput::make('quantity')
+                                    ->numeric()
+                                    ->default(1)
+                                    ->required()
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Get $get, Set $set) => $set('total', (float) $get('quantity') * (float) $get('unit_price'))),
+
+                                TextInput::make('unit_price')
+                                    ->numeric()
+                                    ->required()
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Get $get, Set $set) => $set('total', (float) $get('quantity') * (float) $get('unit_price'))),
+
+                                TextInput::make('total')
+                                    ->numeric()
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->label('Total'),
+                            ])
+                            ->columns(4)
+                            ->minItems(1)
+                            ->addActionLabel('Add Item')
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (array $data, $livewire): void {
+                        $raisedBy = auth()->id();
+
+                        foreach ($data['user_ids'] as $userId) {
+                            $expense = Expense::create([
+                                'user_id' => $userId,
+                                'raised_by' => $raisedBy,
+                                'expense_type_id' => $data['expense_type_id'],
+                                'project_id' => $data['project_id'] ?? null,
+                                'currency_id' => $data['currency_id'],
+                                'description' => $data['description'] ?? null,
+                                'is_billable' => $data['is_billable'] ?? false,
+                                'status' => ExpenseStatus::Draft,
+                            ]);
+
+                            foreach ($data['line_items'] as $index => $item) {
+                                $expense->lineItems()->create([
+                                    'description' => $item['description'],
+                                    'quantity' => $item['quantity'],
+                                    'unit_price' => $item['unit_price'],
+                                    'total' => (float) $item['quantity'] * (float) $item['unit_price'],
+                                    'sort_order' => $index,
+                                ]);
+                            }
+
+                            $expense->recalculateTotal();
+
+                            // Transition to Submitted — observer fires ExpenseSubmitted → workflow
+                            $expense->update(['status' => ExpenseStatus::Submitted]);
+                        }
+
+                        $count = count($data['user_ids']);
+
+                        Notification::make()
+                            ->title($count === 1 ? 'Expense raised successfully' : "{$count} expenses raised successfully")
+                            ->success()
+                            ->send();
+
+                        $livewire->resetTable();
+                    }),
+            ])
             ->columns([
                 TextColumn::make('ref')
                     ->label('Ref')
@@ -80,6 +213,11 @@ class ExpenseResource extends Resource
                 TextColumn::make('user.name')
                     ->label('Staff')
                     ->searchable(),
+
+                TextColumn::make('raisedBy.name')
+                    ->label('Raised By')
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('expenseType.name')
                     ->label('Type'),
@@ -115,6 +253,11 @@ class ExpenseResource extends Resource
                 SelectFilter::make('expense_type_id')
                     ->label('Expense Type')
                     ->relationship('expenseType', 'name'),
+
+                Filter::make('backoffice_raised')
+                    ->label('Backoffice Raised')
+                    ->query(fn ($query) => $query->whereNotNull('raised_by'))
+                    ->toggle(),
 
                 Filter::make('submitted_at')
                     ->form([

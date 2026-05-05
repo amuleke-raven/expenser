@@ -8,6 +8,7 @@ use App\Models\Currency;
 use App\Models\Expense;
 use App\Models\ExpenseType;
 use App\Services\ExpenseRuleEngine;
+use App\Services\WorkflowEngine;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -161,6 +162,11 @@ class ExpenseResource extends Resource
                     ->label('Reference')
                     ->getStateUsing(fn (Expense $record): string => $record->ref()),
 
+                TextEntry::make('raisedBy.name')
+                    ->label('Raised By (Backoffice)')
+                    ->visible(fn (Expense $record): bool => filled($record->raised_by))
+                    ->badge()
+                    ->color('info'),
                 TextEntry::make('expenseType.name')->label('Expense Type'),
                 TextEntry::make('project.name')->label('Project'),
                 TextEntry::make('currency.code')->label('Currency'),
@@ -211,6 +217,11 @@ class ExpenseResource extends Resource
                     ->boolean(),
 
                 TextColumn::make('submitted_at')->dateTime()->label('Submitted'),
+
+                TextColumn::make('raisedBy.name')
+                    ->label('Raised By')
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -257,6 +268,39 @@ class ExpenseResource extends Resource
 
                         Notification::make()
                             ->title('Expense submitted successfully')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('resubmit')
+                    ->label('Resubmit')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('warning')
+                    ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::PendingResubmission)
+                    ->modalHeading('Resubmit Expense')
+                    ->modalDescription(fn (Expense $record): string => filled($record->rejection_reason)
+                        ? "Rejection reason: {$record->rejection_reason}"
+                        : 'This expense was rejected. Add a comment and resubmit for approval.'
+                    )
+                    ->form([
+                        Textarea::make('comment')
+                            ->label('Resubmission Comment')
+                            ->required()
+                            ->placeholder('Explain what has changed or been addressed…'),
+                    ])
+                    ->action(function (Expense $record, array $data) {
+                        $mhw = $record->modelHasWorkflow()->first();
+
+                        app(WorkflowEngine::class)->resubmit($mhw, auth()->user(), $data['comment']);
+
+                        $record->update([
+                            'status' => ExpenseStatus::UnderReview,
+                            'rejected_at' => null,
+                            'rejection_reason' => null,
+                        ]);
+
+                        Notification::make()
+                            ->title('Expense resubmitted successfully')
                             ->success()
                             ->send();
                     }),

@@ -12,6 +12,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -19,6 +20,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 
 class ExpenseTypeResource extends Resource
 {
@@ -95,7 +97,27 @@ class ExpenseTypeResource extends Resource
                     ->label('Workflow'),
             ])
             ->bulkActions([
-                DeleteBulkAction::make(),
+                DeleteBulkAction::make()
+                    ->action(function (DeleteBulkAction $action, Collection $records): void {
+                        [$skipped, $deletable] = $records->partition(fn (ExpenseType $type) => $type->expenses()->exists());
+
+                        $deletable->each->delete();
+
+                        if ($skipped->isNotEmpty()) {
+                            Notification::make()
+                                ->warning()
+                                ->title(trans_choice(':count expense type could not be deleted|:count expense types could not be deleted', $skipped->count(), ['count' => $skipped->count()]))
+                                ->body('They have associated expenses. Remove or reassign them first.')
+                                ->send();
+                        }
+
+                        if ($deletable->isNotEmpty()) {
+                            Notification::make()
+                                ->success()
+                                ->title(trans_choice(':count expense type deleted|:count expense types deleted', $deletable->count(), ['count' => $deletable->count()]))
+                                ->send();
+                        }
+                    }),
             ]);
     }
 

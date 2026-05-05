@@ -1,0 +1,87 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com www.example.com;
+
+    # Redirect all HTTP to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+
+    server_name example.com www.example.com;
+
+    root /var/www/expenser/public;
+    index index.php;
+
+    # SSL — replace with your certificate paths (e.g. from Certbot)
+    ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+    # Hide server version
+    server_tokens off;
+
+    # Logging
+    access_log /var/log/nginx/expenser.access.log;
+    error_log  /var/log/nginx/expenser.error.log warn;
+
+    # Max upload size — adjust to match upload_max_filesize in php.ini
+    client_max_body_size 20M;
+
+    # Block access to hidden files (.env, .git, etc.)
+    location ~ /\. {
+        deny all;
+    }
+
+    # Block direct access to PHP files outside public/
+    location ~* ^/(storage|bootstrap|config|database|resources|routes|tests|vendor)/ {
+        deny all;
+    }
+
+    # Static assets — serve directly with long cache TTL
+    location ~* \.(ico|css|js|gif|jpg|jpeg|png|svg|woff|woff2|ttf|otf|eot|webp|avif)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # Route all requests through Laravel's front controller
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # PHP-FPM
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+
+        fastcgi_read_timeout 60;
+        fastcgi_buffer_size 16k;
+        fastcgi_buffers 4 16k;
+    }
+
+    # Block PHP execution in uploads/storage
+    location ~* /storage/.*\.php$ {
+        deny all;
+    }
+}
