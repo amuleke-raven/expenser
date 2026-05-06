@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\ExpenseAttachment;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class EditExpense extends EditRecord
 {
@@ -15,6 +16,18 @@ class EditExpense extends EditRecord
 
     /** @var array<string> */
     private array $savedAttachmentFiles = [];
+
+    protected function authorizeAccess(): void
+    {
+        parent::authorizeAccess();
+
+        /** @var Expense $record */
+        $record = $this->getRecord();
+
+        if (! in_array($record->status, [ExpenseStatus::Draft, ExpenseStatus::PendingResubmission])) {
+            throw new AuthorizationException;
+        }
+    }
 
     protected function getHeaderActions(): array
     {
