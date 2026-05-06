@@ -307,7 +307,10 @@ class ExpenseResource extends Resource
 
                 ViewAction::make(),
                 EditAction::make()
-                    ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::Draft),
+                    ->visible(fn (Expense $record): bool => in_array($record->status, [
+                        ExpenseStatus::Draft,
+                        ExpenseStatus::PendingResubmission,
+                    ])),
                 DeleteAction::make()
                     ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::Draft),
             ]);
