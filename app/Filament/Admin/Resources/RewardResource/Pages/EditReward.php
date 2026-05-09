@@ -16,6 +16,15 @@ class EditReward extends EditRecord
     /** @var array<string> */
     private array $savedAttachmentFiles = [];
 
+    protected function authorizeAccess(): void
+    {
+        parent::authorizeAccess();
+
+        if ($this->record->status !== RewardStatus::Draft) {
+            $this->redirect(static::getResource()::getUrl('index'));
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [

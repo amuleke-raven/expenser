@@ -16,7 +16,7 @@ class FinanceStatsWidget extends BaseWidget
 
     public static function canView(): bool
     {
-        return auth()->user()->hasAnyRole(['accountant', 'super_admin']);
+        return auth()->user()->can('view_finance');
     }
 
     protected function getStats(): array

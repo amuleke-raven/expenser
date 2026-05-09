@@ -23,6 +23,7 @@ class TopSpendersWidget extends BaseWidget
                     ])
                     ->withSum(['expenses as expense_total' => fn (Builder $q) => $q->whereMonth('created_at', now()->month),
                     ], 'total_amount')
+                    ->whereHas('expenses', fn (Builder $q) => $q->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year))
                     ->orderByDesc('expense_total')
                     ->limit(5)
             )

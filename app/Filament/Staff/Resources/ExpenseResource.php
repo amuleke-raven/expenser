@@ -170,7 +170,7 @@ class ExpenseResource extends Resource
                 TextEntry::make('expenseType.name')->label('Expense Type'),
                 TextEntry::make('project.name')->label('Project'),
                 TextEntry::make('currency.code')->label('Currency'),
-                TextEntry::make('total_amount')->money()->label('Total'),
+                TextEntry::make('total_amount')->money(fn ($record) => $record->currency?->code ?? 'USD')->label('Total'),
                 TextEntry::make('status')
                     ->badge()
                     ->color(fn (ExpenseStatus $state): string => $state->color()),
@@ -205,7 +205,7 @@ class ExpenseResource extends Resource
 
                 TextColumn::make('expenseType.name')->label('Type'),
                 TextColumn::make('project.name')->label('Project'),
-                TextColumn::make('total_amount')->money(),
+                TextColumn::make('total_amount')->money(fn ($record) => $record->currency?->code ?? 'USD'),
                 TextColumn::make('currency.code')->label('Currency'),
 
                 TextColumn::make('status')
