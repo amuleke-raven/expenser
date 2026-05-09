@@ -67,7 +67,7 @@ class ExpenseResource extends Resource
             TextEntry::make('status')
                 ->badge()
                 ->color(fn (ExpenseStatus $state): string => $state->color()),
-            TextEntry::make('total_amount')->money()->label('Total'),
+            TextEntry::make('total_amount')->money(fn ($record) => $record->currency?->code ?? 'USD')->label('Total'),
             TextEntry::make('submitted_at')->dateTime()->label('Submitted'),
             IconEntry::make('is_billable')
                 ->label('Billable')
@@ -226,7 +226,7 @@ class ExpenseResource extends Resource
                     ->label('Project'),
 
                 TextColumn::make('total_amount')
-                    ->money()
+                    ->money(fn ($record) => $record->currency?->code ?? 'USD')
                     ->label('Amount'),
 
                 TextColumn::make('currency.code')

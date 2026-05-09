@@ -37,7 +37,7 @@ class PendingPaymentResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()->hasAnyRole(['admin', 'accountant', 'super_admin']);
+        return auth()->user()->can('view_finance');
     }
 
     public static function form(Schema $schema): Schema

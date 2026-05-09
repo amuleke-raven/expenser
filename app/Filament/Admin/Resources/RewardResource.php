@@ -25,6 +25,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -135,15 +137,75 @@ class RewardResource extends Resource
         ]);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->schema([
+            Section::make('Disbursement Details')
+                ->schema([
+                    TextEntry::make('ref')
+                        ->label('Reference')
+                        ->getStateUsing(fn (Reward $record): string => $record->ref()),
+
+                    TextEntry::make('rewardType.name')
+                        ->label('Disbursement Type'),
+
+                    TextEntry::make('amount')
+                        ->money(fn (Reward $record): string => $record->currency?->code ?? 'USD'),
+
+                    TextEntry::make('currency.code')
+                        ->label('Currency'),
+
+                    TextEntry::make('project.name')
+                        ->label('Project')
+                        ->placeholder('—'),
+
+                    TextEntry::make('recipient_type')
+                        ->label('Recipient Type')
+                        ->formatStateUsing(fn ($state) => $state?->label()),
+
+                    TextEntry::make('payout_date')
+                        ->label('Payout Date')
+                        ->date()
+                        ->placeholder('—'),
+
+                    TextEntry::make('status')
+                        ->badge()
+                        ->color(fn (RewardStatus $state): string => $state->color()),
+
+                    IconEntry::make('is_billable')
+                        ->label('Billable')
+                        ->boolean(),
+
+                    TextEntry::make('initiatedBy.name')
+                        ->label('Initiated By'),
+
+                    TextEntry::make('notes')
+                        ->columnSpanFull()
+                        ->placeholder('—'),
+
+                    TextEntry::make('custom_message')
+                        ->label('Custom Message')
+                        ->columnSpanFull()
+                        ->placeholder('—'),
+
+                    TextEntry::make('rejection_reason')
+                        ->label('Rejection Reason')
+                        ->columnSpanFull()
+                        ->visible(fn (Reward $record): bool => filled($record->rejection_reason)),
+                ])->columnSpanFull(),
+        ]);
+    }
+
     public static function table(Table $table): Table
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->recordUrl(fn (Reward $record): string => static::getUrl('view', ['record' => $record]))
             ->columns([
                 TextColumn::make('ref')->label('Ref'),
                 TextColumn::make('rewardType.name')->label('Type'),
                 TextColumn::make('initiatedBy.name')->label('Initiated By'),
-                TextColumn::make('amount')->money(),
+                TextColumn::make('amount')->money(fn ($record) => $record->currency?->code ?? 'USD'),
                 TextColumn::make('currency.code')->label('Currency'),
                 TextColumn::make('status')
                     ->badge()
@@ -333,6 +395,7 @@ class RewardResource extends Resource
         return [
             'index' => Pages\ListRewards::route('/'),
             'create' => Pages\CreateReward::route('/create'),
+            'view' => Pages\ViewReward::route('/{record}'),
             'edit' => Pages\EditReward::route('/{record}/edit'),
         ];
     }

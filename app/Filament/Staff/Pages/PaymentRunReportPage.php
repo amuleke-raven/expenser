@@ -46,7 +46,7 @@ class PaymentRunReportPage extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()->hasAnyRole(['admin', 'accountant', 'super_admin']);
+        return auth()->user()->can('view_finance');
     }
 
     protected function getFormSchema(): array
