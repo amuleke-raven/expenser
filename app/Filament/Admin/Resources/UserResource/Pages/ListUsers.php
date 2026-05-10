@@ -11,6 +11,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -125,40 +126,55 @@ class ListUsers extends ListRecords
                         return null;
                     }
 
-                    $duplicateEmails = User::query()
+                    $existingEmails = User::query()
                         ->whereIn('email', array_column($rows, 'email'))
                         ->pluck('email')
+                        ->flip()
                         ->all();
 
-                    DB::transaction(function () use ($rows, $duplicateEmails, &$credentials, &$errors, &$rowNumber) {
-                        foreach ($rows as $row) {
-                            if (in_array($row['email'], $duplicateEmails)) {
-                                $errors[] = "Skipped {$row['email']}: email already exists.";
+                    $seenEmails = [];
 
-                                continue;
-                            }
+                    foreach ($rows as $row) {
+                        if (isset($existingEmails[$row['email']])) {
+                            $errors[] = "Skipped {$row['email']}: email already exists.";
 
-                            $plainPassword = Str::password(10, letters: true, numbers: true, symbols: false);
-
-                            $user = User::create([
-                                'name' => $row['name'],
-                                'email' => $row['email'],
-                                'phone' => $row['phone'] ?: null,
-                                'department_id' => $row['departmentId'],
-                                'currency_id' => $row['currencyId'],
-                                'country_id' => $row['countryId'],
-                                'password' => bcrypt($plainPassword),
-                            ]);
-
-                            $user->assignRole('staff');
-
-                            $credentials->push([
-                                'name' => $user->name,
-                                'email' => $user->email,
-                                'password' => $plainPassword,
-                            ]);
+                            continue;
                         }
-                    });
+
+                        if (isset($seenEmails[$row['email']])) {
+                            $errors[] = "Skipped {$row['email']}: duplicate email in import file.";
+
+                            continue;
+                        }
+
+                        $seenEmails[$row['email']] = true;
+
+                        $plainPassword = Str::password(10, letters: true, numbers: true, symbols: false);
+
+                        try {
+                            DB::transaction(function () use ($row, $plainPassword, &$credentials): void {
+                                $user = User::create([
+                                    'name' => $row['name'],
+                                    'email' => $row['email'],
+                                    'phone' => $row['phone'] ?: null,
+                                    'department_id' => $row['departmentId'],
+                                    'currency_id' => $row['currencyId'],
+                                    'country_id' => $row['countryId'],
+                                    'password' => bcrypt($plainPassword),
+                                ]);
+
+                                $user->assignRole('staff');
+
+                                $credentials->push([
+                                    'name' => $user->name,
+                                    'email' => $user->email,
+                                    'password' => $plainPassword,
+                                ]);
+                            });
+                        } catch (UniqueConstraintViolationException) {
+                            $errors[] = "Skipped {$row['email']}: email already exists.";
+                        }
+                    }
 
                     if ($credentials->isEmpty()) {
                         Notification::make()
