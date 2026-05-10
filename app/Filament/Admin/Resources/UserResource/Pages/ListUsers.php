@@ -29,7 +29,7 @@ class ListUsers extends ListRecords
                 ->icon(Heroicon::ArrowUpTray)
                 ->visible(fn (): bool => auth()->user()->hasRole('super_admin'))
                 ->modalHeading('Bulk Import Users')
-                ->modalDescription('Upload a CSV file with columns: name, email. Optional columns: phone. Passwords will be auto-generated.')
+                ->modalDescription('Upload a CSV file with columns: name, email. Optional columns: phone, department_id, currency_id, country_id. Passwords will be auto-generated.')
                 ->modalSubmitActionLabel('Import & Download Credentials')
                 ->extraModalFooterActions([
                     Action::make('downloadTemplate')
@@ -74,6 +74,9 @@ class ListUsers extends ListRecords
                     $nameIdx = array_search('name', $headers);
                     $emailIdx = array_search('email', $headers);
                     $phoneIdx = array_search('phone', $headers);
+                    $departmentIdx = array_search('department_id', $headers);
+                    $currencyIdx = array_search('currency_id', $headers);
+                    $countryIdx = array_search('country_id', $headers);
 
                     /** @var Collection<int, array{name: string, email: string, password: string}> $credentials */
                     $credentials = collect();
@@ -86,10 +89,19 @@ class ListUsers extends ListRecords
                         $name = trim($row[$nameIdx] ?? '');
                         $email = strtolower(trim($row[$emailIdx] ?? ''));
                         $phone = $phoneIdx !== false ? trim($row[$phoneIdx] ?? '') : null;
+                        $departmentId = $departmentIdx !== false ? (trim($row[$departmentIdx] ?? '') ?: null) : null;
+                        $currencyId = $currencyIdx !== false ? (trim($row[$currencyIdx] ?? '') ?: null) : null;
+                        $countryId = $countryIdx !== false ? (trim($row[$countryIdx] ?? '') ?: null) : null;
 
                         $validation = Validator::make(
-                            ['name' => $name, 'email' => $email],
-                            ['name' => 'required|string', 'email' => 'required|email']
+                            ['name' => $name, 'email' => $email, 'department_id' => $departmentId, 'currency_id' => $currencyId, 'country_id' => $countryId],
+                            [
+                                'name' => 'required|string',
+                                'email' => 'required|email',
+                                'department_id' => 'nullable|integer|exists:departments,id',
+                                'currency_id' => 'nullable|integer|exists:currencies,id',
+                                'country_id' => 'nullable|integer|exists:countries,id',
+                            ]
                         );
 
                         if ($validation->fails()) {
@@ -98,7 +110,7 @@ class ListUsers extends ListRecords
                             continue;
                         }
 
-                        $rows[] = compact('name', 'email', 'phone');
+                        $rows[] = compact('name', 'email', 'phone', 'departmentId', 'currencyId', 'countryId');
                     }
 
                     fclose($handle);
@@ -132,8 +144,13 @@ class ListUsers extends ListRecords
                                 'name' => $row['name'],
                                 'email' => $row['email'],
                                 'phone' => $row['phone'] ?: null,
+                                'department_id' => $row['departmentId'],
+                                'currency_id' => $row['currencyId'],
+                                'country_id' => $row['countryId'],
                                 'password' => bcrypt($plainPassword),
                             ]);
+
+                            $user->assignRole('staff');
 
                             $credentials->push([
                                 'name' => $user->name,
