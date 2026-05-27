@@ -12,6 +12,10 @@ class ListExpenses extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [CreateAction::make()];
+        return [
+            CreateAction::make()
+                ->label('New Expense')
+                ->icon('heroicon-o-plus'),
+        ];
     }
 }

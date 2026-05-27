@@ -7,6 +7,7 @@ use App\Enums\PaymentSource;
 use App\Enums\PaymentStatus;
 use App\Enums\RecipientStatus;
 use App\Filament\Staff\Resources\PendingPaymentResource\Pages;
+use App\Models\Currency;
 use App\Models\Expense;
 use App\Models\PendingPayment;
 use App\Models\RewardRecipient;
@@ -21,6 +22,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
 
 class PendingPaymentResource extends Resource
@@ -57,6 +59,10 @@ class PendingPaymentResource extends Resource
             ->modifyQueryUsing(fn ($query) => $query->with([
                 'recipientUser',
                 'rewardRecipient.user',
+                'payable' => fn (MorphTo $morphTo) => $morphTo->morphWith([
+                    Expense::class => ['user', 'expenseType'],
+                    RewardRecipient::class => ['reward.initiatedBy', 'reward.rewardType'],
+                ]),
             ]))
             ->columns([
                 TextColumn::make('payable_type')
@@ -104,6 +110,50 @@ class PendingPaymentResource extends Resource
                             ?? $record->rewardRecipient?->email
                             ?? '—';
                     }),
+                TextColumn::make('requester_name')
+                    ->label('Requester')
+                    ->getStateUsing(function (PendingPayment $record): string {
+                        if ($record->payable instanceof Expense) {
+                            return $record->payable->user?->name ?? '—';
+                        }
+
+                        if ($record->payable instanceof RewardRecipient) {
+                            return $record->payable->reward?->initiatedBy?->name ?? '—';
+                        }
+
+                        return '—';
+                    }),
+
+                TextColumn::make('disbursement_type')
+                    ->label('Disbursement Type')
+                    ->getStateUsing(function (PendingPayment $record): string {
+                        if ($record->payable instanceof Expense) {
+                            return $record->payable->expenseType?->name ?? '—';
+                        }
+
+                        if ($record->payable instanceof RewardRecipient) {
+                            return $record->payable->reward?->rewardType?->name ?? '—';
+                        }
+
+                        return '—';
+                    }),
+
+                TextColumn::make('date_requested')
+                    ->label('Date Requested')
+                    ->getStateUsing(function (PendingPayment $record): string {
+                        if ($record->payable instanceof Expense) {
+                            $date = $record->payable->submitted_at ?? $record->payable->created_at;
+
+                            return $date?->format('M j, Y') ?? '—';
+                        }
+
+                        if ($record->payable instanceof RewardRecipient) {
+                            return $record->payable->reward?->created_at?->format('M j, Y') ?? '—';
+                        }
+
+                        return '—';
+                    }),
+
                 TextColumn::make('amount')->money(),
                 TextColumn::make('currency.code')->label('Currency'),
 
@@ -135,6 +185,10 @@ class PendingPaymentResource extends Resource
                     ->options(collect(PaymentStatus::cases())->mapWithKeys(
                         fn ($case) => [$case->value => $case->label()]
                     )),
+
+                SelectFilter::make('currency_id')
+                    ->label('Currency')
+                    ->options(Currency::query()->orderBy('code')->pluck('code', 'id')),
 
                 SelectFilter::make('payable_type')
                     ->label('Type')
