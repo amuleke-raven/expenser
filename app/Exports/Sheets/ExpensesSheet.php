@@ -36,7 +36,7 @@ class ExpensesSheet implements FromCollection, WithColumnWidths, WithEvents, Wit
     public function headings(): array
     {
         return [
-            'No.', 'Expense Ref', 'Project', 'Staff', 'Email',
+            'No.', 'Date', 'Expense Ref', 'Project', 'Staff', 'Email',
             'Title', 'Description', 'Qty', 'Rate',
             'Amount (Local)', 'Total (USD)', 'Payment Method',
         ];
@@ -81,6 +81,7 @@ class ExpensesSheet implements FromCollection, WithColumnWidths, WithEvents, Wit
 
                 $rows->push([
                     $counter++,
+                    ($payment->processed_at ?? $payment->created_at)->format('d M Y'),
                     $expenseRef,
                     $project,
                     $staff,
@@ -99,7 +100,7 @@ class ExpensesSheet implements FromCollection, WithColumnWidths, WithEvents, Wit
             // Subtotal row
             $this->subtotalRows[] = $rowIdx;
             $rows->push([
-                '', '', '', '', '', '', 'SUBTOTAL', '', '',
+                '', '', '', '', '', '', '', 'SUBTOTAL', '', '',
                 $symbol.number_format($expenseTotal, 2),
                 number_format($rate > 0 ? $expenseTotal / $rate : 0, 2),
                 '',
@@ -146,9 +147,10 @@ class ExpensesSheet implements FromCollection, WithColumnWidths, WithEvents, Wit
     public function columnWidths(): array
     {
         return [
-            'A' => 5,  'B' => 12, 'C' => 18, 'D' => 18,
-            'E' => 28, 'F' => 20, 'G' => 30, 'H' => 8,
-            'I' => 12, 'J' => 16, 'K' => 14, 'L' => 20,
+            'A' => 5,  'B' => 14, 'C' => 12, 'D' => 18,
+            'E' => 18, 'F' => 28, 'G' => 20, 'H' => 30,
+            'I' => 8,  'J' => 12, 'K' => 16, 'L' => 14,
+            'M' => 20,
         ];
     }
 

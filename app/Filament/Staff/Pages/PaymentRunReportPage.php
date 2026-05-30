@@ -4,6 +4,8 @@ namespace App\Filament\Staff\Pages;
 
 use App\Enums\PaymentMethodType;
 use App\Exports\PaymentRunExport;
+use App\Exports\Sheets\ExpensesSheet;
+use App\Exports\Sheets\RewardsSheet;
 use App\Models\Currency;
 use App\Models\Project;
 use Filament\Actions\Action;
@@ -33,6 +35,14 @@ class PaymentRunReportPage extends Page implements HasForms
 
     protected string $view = 'filament.staff.pages.payment-run-report-page';
 
+    public bool $showPreview = false;
+
+    /** @var list<list<mixed>> */
+    public array $previewExpenses = [];
+
+    /** @var list<list<mixed>> */
+    public array $previewDisbursements = [];
+
     public ?array $filters = [
         'date_from' => null,
         'date_to' => null,
@@ -43,6 +53,28 @@ class PaymentRunReportPage extends Page implements HasForms
         'include_rewards' => true,
         'status' => 'approved',
     ];
+
+    public function updatedFilters(): void
+    {
+        $this->showPreview = false;
+    }
+
+    public function preview(): void
+    {
+        $this->previewExpenses = [];
+        $this->previewDisbursements = [];
+
+        if ($this->filters['include_expenses'] ?? true) {
+            $this->previewExpenses = (new ExpensesSheet($this->filters))->collection()->values()->toArray();
+        }
+
+        if ($this->filters['include_rewards'] ?? true) {
+            $this->previewDisbursements = (new RewardsSheet($this->filters))->collection()->values()->toArray();
+            //dd($this->previewDisbursements);
+        }
+
+        $this->showPreview = true;
+    }
 
     public static function canAccess(): bool
     {
@@ -56,6 +88,11 @@ class PaymentRunReportPage extends Page implements HasForms
             Section::make('Filters')
                 ->extraAttributes(['class' => 'mb-3'])
                 ->afterHeader([
+                    Action::make('preview')
+                        ->label('Preview')
+                        ->icon(Heroicon::Eye)
+                        ->color('gray')
+                        ->action(fn () => $this->preview()),
                     Action::make('Export to Excel')
                         ->icon(Heroicon::DocumentArrowDown)
                         ->action(function () {
