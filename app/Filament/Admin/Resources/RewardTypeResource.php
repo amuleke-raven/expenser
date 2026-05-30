@@ -65,7 +65,11 @@ class RewardTypeResource extends Resource
                         ->nullable()
                         ->visible(fn (Get $get): bool => (bool) $get('requires_approval')),
                     Toggle::make('allows_custom_message')->label('Allow Custom Message')->helperText('Enable personalized messages for recipients'),
-                    Toggle::make('requires_attachments')->label('Require Attachments')->helperText('Make file uploads mandatory for this disbursement type'),
+                    Toggle::make('allows_attachments')->label('Allow Attachments')->helperText('Enable file uploads for this disbursement type')->live(),
+                    Toggle::make('requires_attachments')
+                        ->label('Require Attachments')
+                        ->helperText('Make file uploads mandatory')
+                        ->visible(fn (Get $get): bool => (bool) $get('allows_attachments')),
                 ])->columnSpanFull(),
 
             Section::make('Recurrence Configuration')
@@ -111,7 +115,8 @@ class RewardTypeResource extends Resource
                 IconColumn::make('is_client_based')->boolean()->label('Client Based'),
                 IconColumn::make('requires_approval')->boolean()->label('Approval'),
                 IconColumn::make('allows_custom_message')->boolean()->label('Custom Message'),
-                IconColumn::make('requires_attachments')->boolean()->label('Attachments'),
+                IconColumn::make('allows_attachments')->boolean()->label('Attachments'),
+                IconColumn::make('requires_attachments')->boolean()->label('Attachments Required'),
                 IconColumn::make('is_recurrent')->boolean()->label('Recurrent'),
                 TextColumn::make('recurrence_frequency')
                     ->label('Frequency')

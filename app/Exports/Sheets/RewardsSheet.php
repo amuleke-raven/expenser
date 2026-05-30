@@ -30,7 +30,7 @@ class RewardsSheet implements FromCollection, WithColumnWidths, WithHeadings, Wi
     public function headings(): array
     {
         return [
-            'No.', 'Disbursement Ref', 'Project', 'Staff', 'Email',
+            'No.', 'Date', 'Disbursement Ref', 'Project', 'Staff', 'Email',
             'Disbursement Type', 'Amount (Local)', 'Total (USD)',
             'Payment Method', 'Status',
         ];
@@ -62,6 +62,7 @@ class RewardsSheet implements FromCollection, WithColumnWidths, WithHeadings, Wi
 
             return [
                 $counter++,
+                ($payment->processed_at ?? $payment->created_at)->format('d M Y'),
                 $reward?->ref() ?? '—',
                 $reward?->project?->name ?? '—',
                 $recipient?->user?->name ?? $recipient?->name ?? '—',
@@ -111,9 +112,9 @@ class RewardsSheet implements FromCollection, WithColumnWidths, WithHeadings, Wi
     public function columnWidths(): array
     {
         return [
-            'A' => 5,  'B' => 12, 'C' => 18, 'D' => 18,
-            'E' => 28, 'F' => 22, 'G' => 16, 'H' => 14,
-            'I' => 20, 'J' => 12,
+            'A' => 5,  'B' => 14, 'C' => 12, 'D' => 18,
+            'E' => 18, 'F' => 28, 'G' => 22, 'H' => 16,
+            'I' => 14, 'J' => 20, 'K' => 12,
         ];
     }
 

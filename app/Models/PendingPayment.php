@@ -21,6 +21,7 @@ class PendingPayment extends Model
         'amount',
         'currency_id',
         'payment_method_id',
+        'manual_payment_details',
         'status',
         'processed_by',
         'processed_at',

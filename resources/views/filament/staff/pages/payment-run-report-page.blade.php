@@ -18,8 +18,8 @@
                     <table class="fi-ta-table">
                         <thead>
                             <tr class="bg-gray-900 text-white dark:bg-gray-950">
-                                @foreach(['No.', 'Expense Ref', 'Project', 'Staff', 'Email', 'Title', 'Description', 'Qty', 'Rate', 'Amount (Local)', 'Total (USD)', 'Payment Method'] as $heading)
-                                    <th class="">{{ $heading }}</th>
+                                @foreach(['No.','Tx Date', 'Expense Ref', 'Project', 'Staff', 'Email', 'Title', 'Description', 'Qty', 'Rate', 'Amount (Local)', 'Total (USD)', 'Payment Method'] as $heading)
+                                    <th class="" style="text-align: left;">{{ $heading }}</th>
                                 @endforeach
                             </tr>
                         </thead>
@@ -56,8 +56,8 @@
                     <table class="fi-ta-table">
                         <thead>
                             <tr class="bg-gray-900 text-white dark:bg-gray-950">
-                                @foreach(['No.', 'Disbursement Ref', 'Project', 'Staff', 'Email', 'Disbursement Type', 'Amount (Local)', 'Total (USD)', 'Payment Method', 'Status'] as $heading)
-                                    <th class="">{{ $heading }}</th>
+                                @foreach(['No.','Tx Date','Disbursement Ref', 'Project', 'Staff', 'Email', 'Disbursement Type', 'Amount (Local)', 'Total (USD)', 'Payment Method', 'Status'] as $heading)
+                                    <th class="" style="text-align: left;">{{ $heading }}</th>
                                 @endforeach
                             </tr>
                         </thead>

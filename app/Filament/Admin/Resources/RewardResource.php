@@ -126,7 +126,7 @@ class RewardResource extends Resource
                         ->visibility('public')
                         ->disk('public')
                         ->directory('reward-attachments')
-                        ->visible(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->requires_attachments)
+                        ->visible(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->allows_attachments)
                         ->required(fn (Get $get): bool => (bool) RewardType::find($get('reward_type_id'))?->requires_attachments)
                         ->columnSpanFull(),
 
