@@ -64,6 +64,7 @@ class PendingPaymentResource extends Resource
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->currentSelectionLivewireProperty('selectedTableRecordIds')
             ->checkIfRecordIsSelectableUsing(fn (PendingPayment $record): bool => in_array($record->status, [PaymentStatus::Pending, PaymentStatus::Processing]))
             ->modifyQueryUsing(fn ($query) => $query->with([
                 'recipientUser',
@@ -195,7 +196,7 @@ class PendingPaymentResource extends Resource
                         return '—';
                     }),
 
-                TextColumn::make('amount')->money(),
+                TextColumn::make('amount')->numeric(decimalPlaces: 2),
                 TextColumn::make('currency.code')->label('Currency'),
 
                 TextColumn::make('amount_usd')

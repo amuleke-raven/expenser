@@ -11,6 +11,7 @@ enum ExpenseStatus: string
     case Rejected = 'rejected';
     case Paid = 'paid';
     case PendingResubmission = 'pending_resubmission';
+    case Cancelled = 'cancelled';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum ExpenseStatus: string
             self::Rejected => 'Rejected',
             self::Paid => 'Paid',
             self::PendingResubmission => 'Pending Resubmission',
+            self::Cancelled => 'Cancelled',
         };
     }
 
@@ -35,6 +37,7 @@ enum ExpenseStatus: string
             self::Rejected => 'danger',
             self::Paid => 'success',
             self::PendingResubmission => 'warning',
+            self::Cancelled => 'gray',
         };
     }
 }

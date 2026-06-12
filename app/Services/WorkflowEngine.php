@@ -8,12 +8,15 @@ use App\Events\WorkflowCompleted;
 use App\Events\WorkflowInitiated;
 use App\Events\WorkflowRejected;
 use App\Events\WorkflowStepAdvanced;
+use App\Models\Expense;
 use App\Models\ModelHasWorkflow;
+use App\Models\Reward;
 use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Models\WorkflowStepAction;
 use App\Notifications\WorkflowActionRequiredNotification;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +63,10 @@ class WorkflowEngine
         ?string $notes,
         User $actor
     ): void {
+        if ($decision === StepActionStatus::Approved && $this->isSelfApproval($action, $actor)) {
+            throw new AuthorizationException('You cannot approve a request you submitted.');
+        }
+
         DB::transaction(function () use ($action, $decision, $notes, $actor) {
             $action->update([
                 'status' => $decision,
@@ -177,6 +184,37 @@ class WorkflowEngine
         });
     }
 
+    /**
+     * Cancel the active workflow for a subject, closing any pending step actions.
+     */
+    public function cancel(Model $subject, User $actor): void
+    {
+        DB::transaction(function () use ($subject, $actor) {
+            $mhw = ModelHasWorkflow::where('workflowable_id', $subject->id)
+                ->where('workflowable_type', $subject->getMorphClass())
+                ->whereNotIn('status', [WorkflowStatus::Completed, WorkflowStatus::Cancelled])
+                ->first();
+
+            if (! $mhw) {
+                return;
+            }
+
+            $mhw->stepActions()
+                ->where('status', StepActionStatus::Pending)
+                ->update([
+                    'status' => StepActionStatus::Cancelled,
+                    'actor_id' => $actor->id,
+                    'notes' => 'Cancelled by requester',
+                    'actioned_at' => now(),
+                ]);
+
+            $mhw->update([
+                'status' => WorkflowStatus::Cancelled,
+                'completed_at' => now(),
+            ]);
+        });
+    }
+
     public function superApprove(WorkflowStepAction $action, ?string $notes, User $actor): void
     {
         DB::transaction(function () use ($action, $notes, $actor) {
@@ -243,5 +281,29 @@ class WorkflowEngine
                 ->whereColumn('workflow_steps.id', 'workflow_step_actions.workflow_step_id')
             )
             ->first();
+    }
+
+    /**
+     * Determine whether the actor is one of the submitters of the workflow's subject.
+     */
+    public function isSelfApproval(WorkflowStepAction $action, User $actor): bool
+    {
+        $subject = $action->modelHasWorkflow?->workflowable;
+
+        return in_array($actor->id, $this->submitterIdsFor($subject), true);
+    }
+
+    /**
+     * The user ids considered submitters/originators of a workflow subject.
+     *
+     * @return array<int>
+     */
+    private function submitterIdsFor(?Model $subject): array
+    {
+        return match (true) {
+            $subject instanceof Expense => array_values(array_filter([$subject->user_id, $subject->raised_by])),
+            $subject instanceof Reward => array_values(array_filter([$subject->initiated_by])),
+            default => [],
+        };
     }
 }

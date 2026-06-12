@@ -38,6 +38,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 
+// #
+
 class ExpenseResource extends Resource
 {
     protected static ?string $model = Expense::class;
@@ -77,8 +79,16 @@ class ExpenseResource extends Resource
 
                     Select::make('project_id')
                         ->label('Project')
-                        ->options(fn () => auth()->user()->projects()->pluck('name', 'projects.id'))
+                        ->relationship(
+                            'project',
+                            'name',
+                            fn (Builder $query): Builder => $query->whereIn(
+                                'id',
+                                auth()->user()?->projects()->pluck('projects.id')->all() ?? []
+                            )
+                        )
                         ->searchable()
+                        ->preload()
                         ->nullable(),
 
                     Select::make('currency_id')
@@ -311,8 +321,34 @@ class ExpenseResource extends Resource
                         ExpenseStatus::Draft,
                         ExpenseStatus::PendingResubmission,
                     ])),
+                Action::make('cancel')
+                    ->label('Cancel')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Expense $record): bool => in_array($record->status, [
+                        ExpenseStatus::Submitted,
+                        ExpenseStatus::UnderReview,
+                        ExpenseStatus::Rejected,
+                    ]))
+                    ->requiresConfirmation()
+                    ->modalHeading('Cancel this expense request?')
+                    ->modalDescription('This will cancel the expense and cannot be undone.')
+                    ->action(function (Expense $record) {
+                        $record->update(['status' => ExpenseStatus::Cancelled]);
+
+                        app(WorkflowEngine::class)->cancel($record, auth()->user());
+
+                        Notification::make()
+                            ->title('Expense request cancelled')
+                            ->success()
+                            ->send();
+                    }),
+
                 DeleteAction::make()
-                    ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::Draft),
+                    ->visible(fn (Expense $record): bool => in_array($record->status, [
+                        ExpenseStatus::Draft,
+                        ExpenseStatus::Rejected,
+                    ])),
             ]);
     }
 

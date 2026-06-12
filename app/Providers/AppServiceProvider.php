@@ -11,6 +11,7 @@ use App\Listeners\HandleWorkflowCompleted;
 use App\Listeners\HandleWorkflowRejected;
 use App\Listeners\NotifyAccountingOnExpenseApproval;
 use App\Listeners\NotifyRecipientsOnRewardApproval;
+use App\Listeners\SyncImpersonationSessionHash;
 use App\Listeners\TriggerExpenseWorkflow;
 use App\Models\Expense;
 use App\Models\ExpenseLineItem;
@@ -23,6 +24,8 @@ use App\Observers\TicketObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Lab404\Impersonate\Events\LeaveImpersonation;
+use Lab404\Impersonate\Events\TakeImpersonation;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,5 +45,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(RewardApproved::class, NotifyRecipientsOnRewardApproval::class);
         Event::listen(WorkflowCompleted::class, HandleWorkflowCompleted::class);
         Event::listen(WorkflowRejected::class, HandleWorkflowRejected::class);
+        Event::listen(TakeImpersonation::class, [SyncImpersonationSessionHash::class, 'handleTake']);
+        Event::listen(LeaveImpersonation::class, [SyncImpersonationSessionHash::class, 'handleLeave']);
     }
 }
