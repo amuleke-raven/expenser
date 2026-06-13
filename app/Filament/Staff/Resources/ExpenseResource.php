@@ -329,6 +329,7 @@ class ExpenseResource extends Resource
                         ExpenseStatus::Submitted,
                         ExpenseStatus::UnderReview,
                         ExpenseStatus::Rejected,
+                        ExpenseStatus::PendingResubmission,
                     ]))
                     ->requiresConfirmation()
                     ->modalHeading('Cancel this expense request?')

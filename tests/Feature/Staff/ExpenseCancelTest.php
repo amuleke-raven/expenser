@@ -142,6 +142,24 @@ class ExpenseCancelTest extends TestCase
         ]);
     }
 
+    public function test_pending_resubmission_expense_can_be_cancelled(): void
+    {
+        $expense = Expense::factory()->create([
+            'user_id' => $this->user->id,
+            'status' => ExpenseStatus::PendingResubmission,
+        ]);
+
+        $this->actingAs($this->user);
+
+        Livewire::test(ListExpenses::class)
+            ->callTableAction('cancel', $expense);
+
+        $this->assertDatabaseHas(Expense::class, [
+            'id' => $expense->id,
+            'status' => ExpenseStatus::Cancelled->value,
+        ]);
+    }
+
     public function test_draft_expense_cannot_be_cancelled(): void
     {
         $expense = Expense::factory()->create([
