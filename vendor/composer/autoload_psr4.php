@@ -94,6 +94,7 @@ return array(
     'Laravel\\Mcp\\Server\\' => array($vendorDir . '/laravel/mcp/src/Server'),
     'Laravel\\Mcp\\' => array($vendorDir . '/laravel/mcp/src'),
     'Laravel\\Boost\\' => array($vendorDir . '/laravel/boost/src'),
+    'Lab404\\Impersonate\\' => array($vendorDir . '/lab404/laravel-impersonate/src'),
     'Kirschbaum\\PowerJoins\\' => array($vendorDir . '/kirschbaum-development/eloquent-power-joins/src'),
     'Illuminate\\Support\\' => array($vendorDir . '/laravel/framework/src/Illuminate/Macroable', $vendorDir . '/laravel/framework/src/Illuminate/Collections', $vendorDir . '/laravel/framework/src/Illuminate/Conditionable', $vendorDir . '/laravel/framework/src/Illuminate/Reflection'),
     'Illuminate\\' => array($vendorDir . '/laravel/framework/src/Illuminate'),

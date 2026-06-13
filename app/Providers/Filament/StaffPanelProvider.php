@@ -13,6 +13,8 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -63,6 +65,10 @@ class StaffPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->maxContentWidth(Width::Full)
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                fn (): View => view('filament.impersonate-banner'),
+            )
             ->authMiddleware([
                 Authenticate::class,
             ]);

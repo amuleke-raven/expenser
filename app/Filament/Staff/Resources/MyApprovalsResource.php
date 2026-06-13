@@ -67,6 +67,36 @@ class MyApprovalsResource extends Resource
                 ->whereColumn('model_has_workflows.id', 'workflow_step_actions.model_has_workflow_id')
                 ->whereColumn('workflow_steps.id', 'workflow_step_actions.workflow_step_id')
             )
+            ->whereNotExists(fn (QueryBuilder $q) => $q
+                ->from('model_has_workflows')
+                ->join('expenses', fn ($j) => $j
+                    ->on('expenses.id', '=', 'model_has_workflows.workflowable_id')
+                    ->where('model_has_workflows.workflowable_type', Expense::class)
+                )
+                ->whereColumn('model_has_workflows.id', 'workflow_step_actions.model_has_workflow_id')
+                ->where('expenses.status', ExpenseStatus::Cancelled->value)
+            )
+            ->whereNotExists(fn (QueryBuilder $q) => $q
+                ->from('model_has_workflows')
+                ->join('expenses', fn ($j) => $j
+                    ->on('expenses.id', '=', 'model_has_workflows.workflowable_id')
+                    ->where('model_has_workflows.workflowable_type', Expense::class)
+                )
+                ->whereColumn('model_has_workflows.id', 'workflow_step_actions.model_has_workflow_id')
+                ->where(fn ($w) => $w
+                    ->where('expenses.user_id', $user->id)
+                    ->orWhere('expenses.raised_by', $user->id)
+                )
+            )
+            ->whereNotExists(fn (QueryBuilder $q) => $q
+                ->from('model_has_workflows')
+                ->join('rewards', fn ($j) => $j
+                    ->on('rewards.id', '=', 'model_has_workflows.workflowable_id')
+                    ->where('model_has_workflows.workflowable_type', Reward::class)
+                )
+                ->whereColumn('model_has_workflows.id', 'workflow_step_actions.model_has_workflow_id')
+                ->where('rewards.initiated_by', $user->id)
+            )
             ->with(['workflowStep', 'modelHasWorkflow.workflowable']);
 
         if ($user->hasRole('super_admin')) {

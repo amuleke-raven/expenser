@@ -13,6 +13,7 @@ use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Models\WorkflowStepAction;
 use App\Services\WorkflowEngine;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -198,6 +199,49 @@ class SuperAdminApprovalTest extends TestCase
         $this->assertDatabaseHas(Expense::class, [
             'id' => $expense->id,
             'status' => ExpenseStatus::Approved->value,
+        ]);
+    }
+
+    public function test_user_cannot_approve_their_own_submitted_expense(): void
+    {
+        $manager = User::factory()->create();
+        $manager->assignRole('manager');
+
+        $expense = Expense::factory()->create([
+            'user_id' => $manager->id,
+            'status' => ExpenseStatus::Submitted,
+        ]);
+
+        $mhw = ModelHasWorkflow::create([
+            'workflow_id' => $this->workflow->id,
+            'workflowable_id' => $expense->id,
+            'workflowable_type' => Expense::class,
+            'current_step' => 1,
+            'status' => WorkflowStatus::InProgress,
+            'started_at' => now(),
+        ]);
+
+        $action = WorkflowStepAction::create([
+            'model_has_workflow_id' => $mhw->id,
+            'workflow_step_id' => $this->stepOne->id,
+            'status' => StepActionStatus::Pending,
+        ]);
+
+        try {
+            app(WorkflowEngine::class)->advance($action, StepActionStatus::Approved, null, $manager);
+            $this->fail('Expected AuthorizationException was not thrown.');
+        } catch (AuthorizationException $e) {
+            // expected
+        }
+
+        $this->assertDatabaseHas(WorkflowStepAction::class, [
+            'id' => $action->id,
+            'status' => StepActionStatus::Pending->value,
+        ]);
+
+        $this->assertDatabaseHas(ModelHasWorkflow::class, [
+            'id' => $mhw->id,
+            'status' => WorkflowStatus::InProgress->value,
         ]);
     }
 

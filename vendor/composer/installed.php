@@ -3,7 +3,7 @@
         'name' => 'laravel/laravel',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '574dd86a83b7ade54763487dc92a4f36ba237c95',
+        'reference' => '95dab42b0c764dd3eb0f7cfc0f6da6bb2de4001e',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -586,6 +586,15 @@
                 0 => '*',
             ),
         ),
+        'lab404/laravel-impersonate' => array(
+            'pretty_version' => '1.7.8',
+            'version' => '1.7.8.0',
+            'reference' => '0008a39da8914cc946b6a5ed211230708ee736b3',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../lab404/laravel-impersonate',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'laravel/boost' => array(
             'pretty_version' => 'v2.4.8',
             'version' => '2.4.8.0',
@@ -607,7 +616,7 @@
         'laravel/laravel' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '574dd86a83b7ade54763487dc92a4f36ba237c95',
+            'reference' => '95dab42b0c764dd3eb0f7cfc0f6da6bb2de4001e',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -1144,8 +1153,8 @@
         'psr/log-implementation' => array(
             'dev_requirement' => false,
             'provided' => array(
-                0 => '3.0.0',
-                1 => '1.0|2.0|3.0',
+                0 => '1.0|2.0|3.0',
+                1 => '3.0.0',
             ),
         ),
         'psr/simple-cache' => array(

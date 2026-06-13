@@ -19,7 +19,10 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
@@ -115,6 +118,44 @@ class UserResource extends Resource
                 TextColumn::make('roles.name')
                     ->badge()
                     ->label('Roles'),
+            ])
+            ->filters([
+                Filter::make('name')
+                    ->form([
+                        TextInput::make('name')->label('Name')->placeholder('Search by name'),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        $data['name'],
+                        fn (Builder $q, string $value): Builder => $q->where('name', 'like', "%{$value}%")
+                    ))
+                    ->indicateUsing(fn (array $data): ?string => filled($data['name']) ? "Name: {$data['name']}" : null),
+
+                Filter::make('email')
+                    ->form([
+                        TextInput::make('email')->label('Email')->placeholder('Search by email'),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        $data['email'],
+                        fn (Builder $q, string $value): Builder => $q->where('email', 'like', "%{$value}%")
+                    ))
+                    ->indicateUsing(fn (array $data): ?string => filled($data['email']) ? "Email: {$data['email']}" : null),
+
+                SelectFilter::make('department')
+                    ->relationship('department', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->label('Department'),
+            ])
+            ->actions([
+                Action::make('impersonate')
+                    ->label('Impersonate')
+                    ->icon('heroicon-o-user-circle')
+                    ->color('warning')
+                    ->visible(fn (User $record): bool => auth()->user()->canImpersonate()
+                        && $record->canBeImpersonated()
+                        && $record->id !== auth()->id()
+                    )
+                    ->url(fn (User $record): string => route('impersonate', ['id' => $record->id])),
             ]);
     }
 

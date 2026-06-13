@@ -1,6 +1,11 @@
 {
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "laravel-boost"
   ],
-  "enableAllProjectMcpServers": true
+  "permissions": {
+    "allow": [
+      "Bash(grep -nE 'initiated_by|protected \\\\$fillable|fillable|casts|public function' app/Models/Reward.php)"
+    ]
+  }
 }

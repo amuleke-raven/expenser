@@ -11,12 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Lab404\Impersonate\Models\Impersonate;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable;
+    use HasFactory, HasRoles, Impersonate, Notifiable;
 
     /**
      * @var list<string>
@@ -56,6 +57,16 @@ class User extends Authenticatable implements FilamentUser
             'it' => $this->hasAnyRole(['it_staff', 'admin', 'super_admin']),
             default => false,
         };
+    }
+
+    public function canImpersonate(): bool
+    {
+        return $this->hasAnyRole(['admin', 'super_admin']);
+    }
+
+    public function canBeImpersonated(): bool
+    {
+        return ! $this->hasAnyRole(['admin', 'super_admin']);
     }
 
     public function department(): BelongsTo

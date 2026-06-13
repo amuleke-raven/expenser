@@ -14,7 +14,7 @@ return new class extends Migration
         $permission = Permission::firstOrCreate(['name' => 'view_finance']);
 
         foreach (['super_admin', 'admin', 'accountant'] as $roleName) {
-            $role = Role::findByName($roleName);
+            $role = Role::where('name', $roleName)->first();
             if ($role && ! $role->hasPermissionTo($permission)) {
                 $role->givePermissionTo($permission);
             }
