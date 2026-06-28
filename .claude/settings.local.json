@@ -1,11 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(grep -nE 'initiated_by|protected \\\\$fillable|fillable|casts|public function' app/Models/Reward.php)",
+      "Bash(vendor/bin/pint --dirty --format agent)",
+      "Bash(php artisan *)"
+    ]
+  },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "laravel-boost"
-  ],
-  "permissions": {
-    "allow": [
-      "Bash(grep -nE 'initiated_by|protected \\\\$fillable|fillable|casts|public function' app/Models/Reward.php)"
-    ]
-  }
+  ]
 }
