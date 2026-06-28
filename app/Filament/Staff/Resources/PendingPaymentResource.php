@@ -30,6 +30,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -51,6 +52,352 @@ class PendingPaymentResource extends Resource
         return auth()->user()->can('view_finance');
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->whereIn('status', [PaymentStatus::Pending, PaymentStatus::Processing, PaymentStatus::Failed]);
+    }
+
+    public static function eagerLoadRelations(Builder $query): Builder
+    {
+        return $query->with([
+            'recipientUser',
+            'rewardRecipient.user',
+            'payable' => fn (MorphTo $morphTo) => $morphTo->morphWith([
+                Expense::class => ['user', 'expenseType', 'project', 'currency', 'lineItems', 'attachments'],
+                RewardRecipient::class => ['reward.initiatedBy', 'reward.rewardType', 'reward.project', 'reward.currency', 'reward.attachments', 'reward.recipients.user'],
+            ]),
+        ]);
+    }
+
+    /**
+     * Columns shared between the Pending Payments and Processed Payments tables.
+     *
+     * @return array<int, TextColumn|IconColumn>
+     */
+    public static function baseColumns(): array
+    {
+        return [
+            TextColumn::make('payable_type')
+                ->label('Type')
+                ->badge()
+                ->formatStateUsing(fn ($state) => match ($state) {
+                    Expense::class => 'Expense',
+                    RewardRecipient::class => 'Disbursement',
+                    default => $state,
+                })
+                ->color(fn ($state) => match ($state) {
+                    Expense::class => 'info',
+                    RewardRecipient::class => 'info',
+                    default => 'gray',
+                }),
+
+            TextColumn::make('ref')
+                ->label('Ref')
+                ->getStateUsing(fn (PendingPayment $record): string => match (true) {
+                    $record->payable instanceof Expense => $record->payable->ref(),
+                    $record->payable instanceof RewardRecipient => $record->payable->reward?->ref() ?? '—',
+                    default => '—',
+                }),
+
+            TextColumn::make('recipient_name')
+                ->label('Recipient')
+                ->getStateUsing(function (PendingPayment $record): string {
+                    if ($record->payment_source === PaymentSource::Expense) {
+                        return $record->recipientUser?->name ?? '—';
+                    }
+
+                    return $record->rewardRecipient?->user?->name
+                        ?? $record->rewardRecipient?->name
+                        ?? '—';
+                })
+                ->sortable(query: function ($query, string $direction) {
+                    $query
+                        ->select('pending_payments.*')
+                        ->leftJoin('users as expense_recipient_users', function ($join) {
+                            $join->on('pending_payments.recipient_id', '=', 'expense_recipient_users.id')
+                                ->where('pending_payments.payment_source', '=', PaymentSource::Expense->value);
+                        })
+                        ->leftJoin('reward_recipients as sorted_reward_recipients', function ($join) {
+                            $join->on('pending_payments.recipient_id', '=', 'sorted_reward_recipients.id')
+                                ->where('pending_payments.payment_source', '=', PaymentSource::Reward->value);
+                        })
+                        ->leftJoin('users as reward_recipient_users', 'sorted_reward_recipients.user_id', '=', 'reward_recipient_users.id')
+                        ->orderByRaw(
+                            "COALESCE(expense_recipient_users.name, reward_recipient_users.name, sorted_reward_recipients.name) {$direction}"
+                        );
+                }),
+
+            TextColumn::make('recipient_email')
+                ->label('Email')
+                ->getStateUsing(function (PendingPayment $record): string {
+                    if ($record->payment_source === PaymentSource::Expense) {
+                        return $record->recipientUser?->email ?? '—';
+                    }
+
+                    return $record->rewardRecipient?->user?->email
+                        ?? $record->rewardRecipient?->email
+                        ?? '—';
+                }),
+            TextColumn::make('requester_name')
+                ->label('Requester')
+                ->getStateUsing(function (PendingPayment $record): string {
+                    if ($record->payable instanceof Expense) {
+                        return $record->payable->user?->name ?? '—';
+                    }
+
+                    if ($record->payable instanceof RewardRecipient) {
+                        return $record->payable->reward?->initiatedBy?->name ?? '—';
+                    }
+
+                    return '—';
+                }),
+
+            TextColumn::make('disbursement_type')
+                ->label('Disbursement Type')
+                ->getStateUsing(function (PendingPayment $record): string {
+                    if ($record->payable instanceof Expense) {
+                        return $record->payable->expenseType?->name ?? '—';
+                    }
+
+                    if ($record->payable instanceof RewardRecipient) {
+                        return $record->payable->reward?->rewardType?->name ?? '—';
+                    }
+
+                    return '—';
+                }),
+
+            IconColumn::make('is_billable')
+                ->label('Billable')
+                ->boolean()
+                ->getStateUsing(function (PendingPayment $record): ?bool {
+                    if ($record->payable instanceof Expense) {
+                        return $record->payable->is_billable;
+                    }
+
+                    if ($record->payable instanceof RewardRecipient) {
+                        return $record->payable->reward?->is_billable;
+                    }
+
+                    return null;
+                }),
+
+            TextColumn::make('date_requested')
+                ->label('Date Requested')
+                ->getStateUsing(function (PendingPayment $record): string {
+                    if ($record->payable instanceof Expense) {
+                        $date = $record->payable->submitted_at ?? $record->payable->created_at;
+
+                        return $date?->format('M j, Y') ?? '—';
+                    }
+
+                    if ($record->payable instanceof RewardRecipient) {
+                        return $record->payable->reward?->created_at?->format('M j, Y') ?? '—';
+                    }
+
+                    return '—';
+                }),
+
+            TextColumn::make('amount')->numeric(decimalPlaces: 2),
+            TextColumn::make('currency.code')->label('Currency'),
+
+            TextColumn::make('amount_usd')
+                ->label('Amount (USD)')
+                ->toggleable(isToggledHiddenByDefault: true)
+                ->getStateUsing(fn (PendingPayment $record): string => '$'.number_format(
+                    (float) $record->amount / max((float) ($record->currency?->conversion_rate ?? 1), 0.000001),
+                    2
+                )
+                ),
+
+            TextColumn::make('payment_method_display')
+                ->label('Payment Method')
+                ->getStateUsing(fn (PendingPayment $record): string => $record->paymentMethod?->name
+                    ?? $record->manual_payment_details
+                    ?? '—'
+                ),
+        ];
+    }
+
+    /**
+     * Detail view (slide-over infolist) shared between the Pending and Processed payment tables.
+     *
+     * @return array<int, Section>
+     */
+    public static function detailsInfolist(PendingPayment $record): array
+    {
+        if ($record->payable instanceof Expense) {
+            $expense = $record->payable;
+
+            return [
+                Section::make('Expense Details')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('ref')
+                            ->label('Reference')
+                            ->getStateUsing(fn () => $expense->ref()),
+                        TextEntry::make('expense_type')
+                            ->label('Type')
+                            ->getStateUsing(fn () => $expense->expenseType?->name ?? '—'),
+                        TextEntry::make('project')
+                            ->label('Project')
+                            ->getStateUsing(fn () => $expense->project?->name ?? '—'),
+                        TextEntry::make('submitted_by')
+                            ->label('Submitted By')
+                            ->getStateUsing(fn () => $expense->user?->name ?? '—'),
+                        TextEntry::make('currency')
+                            ->label('Currency')
+                            ->getStateUsing(fn () => $expense->currency?->code ?? '—'),
+                        TextEntry::make('total_amount')
+                            ->label('Total Amount')
+                            ->getStateUsing(fn () => $expense->total_amount)
+                            ->numeric(decimalPlaces: 2),
+                        TextEntry::make('status')
+                            ->label('Status')
+                            ->getStateUsing(fn () => $expense->status->label())
+                            ->badge()
+                            ->color(fn () => $expense->status->color()),
+                        TextEntry::make('submitted_at')
+                            ->label('Submitted At')
+                            ->getStateUsing(fn () => $expense->submitted_at?->format('d M Y, H:i') ?? '—'),
+                        TextEntry::make('description')
+                            ->label('Description')
+                            ->getStateUsing(fn () => $expense->description ?? '—')
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('Line Items')
+                    ->schema([
+                        RepeatableEntry::make('line_items')
+                            ->hiddenLabel()
+                            ->state(fn () => $expense->lineItems)
+                            ->schema([
+                                TextEntry::make('description')->label('Description'),
+                                TextEntry::make('quantity')->numeric(decimalPlaces: 2),
+                                TextEntry::make('unit_price')->money()->label('Unit Price'),
+                                TextEntry::make('total')->money(),
+                            ])
+                            ->columns(4)
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('Attachments')
+                    ->visible(fn () => $expense->attachments->isNotEmpty())
+                    ->schema([
+                        RepeatableEntry::make('attachments')
+                            ->hiddenLabel()
+                            ->state(fn () => $expense->attachments)
+                            ->schema([
+                                TextEntry::make('original_name')
+                                    ->label('File')
+                                    ->url(fn ($record) => Storage::url($record->path))
+                                    ->openUrlInNewTab(),
+                            ])
+                            ->columnSpanFull(),
+                    ]),
+            ];
+        }
+
+        if ($record->payable instanceof RewardRecipient) {
+            $reward = $record->payable->reward;
+
+            return [
+                Section::make('Disbursement Details')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('ref')
+                            ->label('Reference')
+                            ->getStateUsing(fn () => $reward?->ref() ?? '—'),
+                        TextEntry::make('reward_type')
+                            ->label('Reward Type')
+                            ->getStateUsing(fn () => $reward?->rewardType?->name ?? '—'),
+                        TextEntry::make('project')
+                            ->label('Project')
+                            ->getStateUsing(fn () => $reward?->project?->name ?? '—'),
+                        TextEntry::make('initiated_by')
+                            ->label('Initiated By')
+                            ->getStateUsing(fn () => $reward?->initiatedBy?->name ?? '—'),
+                        TextEntry::make('currency')
+                            ->label('Currency')
+                            ->getStateUsing(fn () => $reward?->currency?->code ?? '—'),
+                        TextEntry::make('amount')
+                            ->label('Amount')
+                            ->getStateUsing(fn () => $reward?->amount)
+                            ->numeric(decimalPlaces: 2),
+                        TextEntry::make('status')
+                            ->label('Status')
+                            ->getStateUsing(fn () => $reward?->status->label() ?? '—')
+                            ->badge()
+                            ->color(fn () => $reward?->status instanceof RewardStatus ? $reward->status->color() : 'gray'),
+                        TextEntry::make('payout_date')
+                            ->label('Payout Date')
+                            ->getStateUsing(fn () => $reward?->payout_date?->format('d M Y') ?? '—'),
+                        TextEntry::make('notes')
+                            ->label('Notes')
+                            ->getStateUsing(fn () => $reward?->notes ?? '—')
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('This Recipient')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('recipient_name')
+                            ->label('Name')
+                            ->getStateUsing(fn () => $record->payable->user?->name ?? $record->payable->name ?? '—'),
+                        TextEntry::make('recipient_email')
+                            ->label('Email')
+                            ->getStateUsing(fn () => $record->payable->user?->email ?? $record->payable->email ?? '—'),
+                        TextEntry::make('recipient_status')
+                            ->label('Status')
+                            ->getStateUsing(fn () => $record->payable->status->label())
+                            ->badge()
+                            ->color(fn () => $record->payable->status->color()),
+                    ]),
+                Section::make('All Recipients')
+                    ->visible(fn () => $reward?->recipients->isNotEmpty())
+                    ->schema([
+                        RepeatableEntry::make('recipients')
+                            ->hiddenLabel()
+                            ->state(fn () => $reward?->recipients ?? collect())
+                            ->schema([
+                                TextEntry::make('name')
+                                    ->label('Name')
+                                    ->getStateUsing(fn ($record) => $record->user?->name ?? $record->name ?? '—'),
+                                TextEntry::make('email')
+                                    ->label('Email')
+                                    ->getStateUsing(fn ($record) => $record->user?->email ?? $record->email ?? '—'),
+                                TextEntry::make('status')
+                                    ->label('Status')
+                                    ->formatStateUsing(fn (RecipientStatus $state) => $state->label())
+                                    ->badge()
+                                    ->color(fn (RecipientStatus $state) => $state->color()),
+                            ])
+                            ->columns(3)
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('Attachments')
+                    ->visible(fn () => $reward?->attachments->isNotEmpty())
+                    ->schema([
+                        RepeatableEntry::make('attachments')
+                            ->hiddenLabel()
+                            ->state(fn () => $reward?->attachments ?? collect())
+                            ->schema([
+                                TextEntry::make('original_name')
+                                    ->label('File')
+                                    ->url(fn ($record) => Storage::url($record->path))
+                                    ->openUrlInNewTab(),
+                            ])
+                            ->columnSpanFull(),
+                    ]),
+            ];
+        }
+
+        return [
+            Section::make()->schema([
+                TextEntry::make('notice')
+                    ->hiddenLabel()
+                    ->getStateUsing(fn () => 'No details available.'),
+            ]),
+        ];
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
@@ -66,154 +413,10 @@ class PendingPaymentResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->currentSelectionLivewireProperty('selectedTableRecordIds')
             ->checkIfRecordIsSelectableUsing(fn (PendingPayment $record): bool => in_array($record->status, [PaymentStatus::Pending, PaymentStatus::Processing]))
-            ->modifyQueryUsing(fn ($query) => $query->with([
-                'recipientUser',
-                'rewardRecipient.user',
-                'payable' => fn (MorphTo $morphTo) => $morphTo->morphWith([
-                    Expense::class => ['user', 'expenseType', 'project', 'currency', 'lineItems', 'attachments'],
-                    RewardRecipient::class => ['reward.initiatedBy', 'reward.rewardType', 'reward.project', 'reward.currency', 'reward.attachments', 'reward.recipients.user'],
-                ]),
-            ]))
+            ->modifyQueryUsing(fn (Builder $query) => self::eagerLoadRelations($query))
             ->recordAction('view_details')
             ->columns([
-                TextColumn::make('payable_type')
-                    ->label('Type')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        Expense::class => 'Expense',
-                        RewardRecipient::class => 'Disbursement',
-                        default => $state,
-                    })
-                    ->color(fn ($state) => match ($state) {
-                        Expense::class => 'info',
-                        RewardRecipient::class => 'info',
-                        default => 'gray',
-                    }),
-
-                TextColumn::make('ref')
-                    ->label('Ref')
-                    ->getStateUsing(fn (PendingPayment $record): string => match (true) {
-                        $record->payable instanceof Expense => $record->payable->ref(),
-                        $record->payable instanceof RewardRecipient => $record->payable->reward?->ref() ?? '—',
-                        default => '—',
-                    }),
-
-                TextColumn::make('recipient_name')
-                    ->label('Recipient')
-                    ->getStateUsing(function (PendingPayment $record): string {
-                        if ($record->payment_source === PaymentSource::Expense) {
-                            return $record->recipientUser?->name ?? '—';
-                        }
-
-                        return $record->rewardRecipient?->user?->name
-                            ?? $record->rewardRecipient?->name
-                            ?? '—';
-                    })
-                    ->sortable(query: function ($query, string $direction) {
-                        $query
-                            ->select('pending_payments.*')
-                            ->leftJoin('users as expense_recipient_users', function ($join) {
-                                $join->on('pending_payments.recipient_id', '=', 'expense_recipient_users.id')
-                                    ->where('pending_payments.payment_source', '=', PaymentSource::Expense->value);
-                            })
-                            ->leftJoin('reward_recipients as sorted_reward_recipients', function ($join) {
-                                $join->on('pending_payments.recipient_id', '=', 'sorted_reward_recipients.id')
-                                    ->where('pending_payments.payment_source', '=', PaymentSource::Reward->value);
-                            })
-                            ->leftJoin('users as reward_recipient_users', 'sorted_reward_recipients.user_id', '=', 'reward_recipient_users.id')
-                            ->orderByRaw(
-                                "COALESCE(expense_recipient_users.name, reward_recipient_users.name, sorted_reward_recipients.name) {$direction}"
-                            );
-                    }),
-
-                TextColumn::make('recipient_email')
-                    ->label('Email')
-                    ->getStateUsing(function (PendingPayment $record): string {
-                        if ($record->payment_source === PaymentSource::Expense) {
-                            return $record->recipientUser?->email ?? '—';
-                        }
-
-                        return $record->rewardRecipient?->user?->email
-                            ?? $record->rewardRecipient?->email
-                            ?? '—';
-                    }),
-                TextColumn::make('requester_name')
-                    ->label('Requester')
-                    ->getStateUsing(function (PendingPayment $record): string {
-                        if ($record->payable instanceof Expense) {
-                            return $record->payable->user?->name ?? '—';
-                        }
-
-                        if ($record->payable instanceof RewardRecipient) {
-                            return $record->payable->reward?->initiatedBy?->name ?? '—';
-                        }
-
-                        return '—';
-                    }),
-
-                TextColumn::make('disbursement_type')
-                    ->label('Disbursement Type')
-                    ->getStateUsing(function (PendingPayment $record): string {
-                        if ($record->payable instanceof Expense) {
-                            return $record->payable->expenseType?->name ?? '—';
-                        }
-
-                        if ($record->payable instanceof RewardRecipient) {
-                            return $record->payable->reward?->rewardType?->name ?? '—';
-                        }
-
-                        return '—';
-                    }),
-
-                IconColumn::make('is_billable')
-                    ->label('Billable')
-                    ->boolean()
-                    ->getStateUsing(function (PendingPayment $record): ?bool {
-                        if ($record->payable instanceof Expense) {
-                            return $record->payable->is_billable;
-                        }
-
-                        if ($record->payable instanceof RewardRecipient) {
-                            return $record->payable->reward?->is_billable;
-                        }
-
-                        return null;
-                    }),
-
-                TextColumn::make('date_requested')
-                    ->label('Date Requested')
-                    ->getStateUsing(function (PendingPayment $record): string {
-                        if ($record->payable instanceof Expense) {
-                            $date = $record->payable->submitted_at ?? $record->payable->created_at;
-
-                            return $date?->format('M j, Y') ?? '—';
-                        }
-
-                        if ($record->payable instanceof RewardRecipient) {
-                            return $record->payable->reward?->created_at?->format('M j, Y') ?? '—';
-                        }
-
-                        return '—';
-                    }),
-
-                TextColumn::make('amount')->numeric(decimalPlaces: 2),
-                TextColumn::make('currency.code')->label('Currency'),
-
-                TextColumn::make('amount_usd')
-                    ->label('Amount (USD)')
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->getStateUsing(fn (PendingPayment $record): string => '$'.number_format(
-                        (float) $record->amount / max((float) ($record->currency?->conversion_rate ?? 1), 0.000001),
-                        2
-                    )
-                    ),
-
-                TextColumn::make('payment_method_display')
-                    ->label('Payment Method')
-                    ->getStateUsing(fn (PendingPayment $record): string => $record->paymentMethod?->name
-                        ?? $record->manual_payment_details
-                        ?? '—'
-                    ),
+                ...self::baseColumns(),
 
                 TextColumn::make('status')
                     ->badge()
@@ -229,9 +432,10 @@ class PendingPaymentResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('status')
-                    ->options(collect(PaymentStatus::cases())->mapWithKeys(
-                        fn ($case) => [$case->value => $case->label()]
-                    )),
+                    ->options(collect(PaymentStatus::cases())
+                        ->reject(fn (PaymentStatus $case) => $case === PaymentStatus::Paid)
+                        ->mapWithKeys(fn ($case) => [$case->value => $case->label()])
+                    ),
 
                 SelectFilter::make('currency_id')
                     ->label('Currency')
@@ -284,178 +488,7 @@ class PendingPaymentResource extends Resource
                     ->label('View Details')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
-                    ->infolist(function (PendingPayment $record): array {
-                        if ($record->payable instanceof Expense) {
-                            $expense = $record->payable;
-
-                            return [
-                                Section::make('Expense Details')
-                                    ->columns(3)
-                                    ->schema([
-                                        TextEntry::make('ref')
-                                            ->label('Reference')
-                                            ->getStateUsing(fn () => $expense->ref()),
-                                        TextEntry::make('expense_type')
-                                            ->label('Type')
-                                            ->getStateUsing(fn () => $expense->expenseType?->name ?? '—'),
-                                        TextEntry::make('project')
-                                            ->label('Project')
-                                            ->getStateUsing(fn () => $expense->project?->name ?? '—'),
-                                        TextEntry::make('submitted_by')
-                                            ->label('Submitted By')
-                                            ->getStateUsing(fn () => $expense->user?->name ?? '—'),
-                                        TextEntry::make('currency')
-                                            ->label('Currency')
-                                            ->getStateUsing(fn () => $expense->currency?->code ?? '—'),
-                                        TextEntry::make('total_amount')
-                                            ->label('Total Amount')
-                                            ->getStateUsing(fn () => $expense->total_amount)
-                                            ->numeric(decimalPlaces: 2),
-                                        TextEntry::make('status')
-                                            ->label('Status')
-                                            ->getStateUsing(fn () => $expense->status->label())
-                                            ->badge()
-                                            ->color(fn () => $expense->status->color()),
-                                        TextEntry::make('submitted_at')
-                                            ->label('Submitted At')
-                                            ->getStateUsing(fn () => $expense->submitted_at?->format('d M Y, H:i') ?? '—'),
-                                        TextEntry::make('description')
-                                            ->label('Description')
-                                            ->getStateUsing(fn () => $expense->description ?? '—')
-                                            ->columnSpanFull(),
-                                    ]),
-                                Section::make('Line Items')
-                                    ->schema([
-                                        RepeatableEntry::make('line_items')
-                                            ->hiddenLabel()
-                                            ->state(fn () => $expense->lineItems)
-                                            ->schema([
-                                                TextEntry::make('description')->label('Description'),
-                                                TextEntry::make('quantity')->numeric(decimalPlaces: 2),
-                                                TextEntry::make('unit_price')->money()->label('Unit Price'),
-                                                TextEntry::make('total')->money(),
-                                            ])
-                                            ->columns(4)
-                                            ->columnSpanFull(),
-                                    ]),
-                                Section::make('Attachments')
-                                    ->visible(fn () => $expense->attachments->isNotEmpty())
-                                    ->schema([
-                                        RepeatableEntry::make('attachments')
-                                            ->hiddenLabel()
-                                            ->state(fn () => $expense->attachments)
-                                            ->schema([
-                                                TextEntry::make('original_name')
-                                                    ->label('File')
-                                                    ->url(fn ($record) => Storage::url($record->path))
-                                                    ->openUrlInNewTab(),
-                                            ])
-                                            ->columnSpanFull(),
-                                    ]),
-                            ];
-                        }
-
-                        if ($record->payable instanceof RewardRecipient) {
-                            $reward = $record->payable->reward;
-
-                            return [
-                                Section::make('Disbursement Details')
-                                    ->columns(3)
-                                    ->schema([
-                                        TextEntry::make('ref')
-                                            ->label('Reference')
-                                            ->getStateUsing(fn () => $reward?->ref() ?? '—'),
-                                        TextEntry::make('reward_type')
-                                            ->label('Reward Type')
-                                            ->getStateUsing(fn () => $reward?->rewardType?->name ?? '—'),
-                                        TextEntry::make('project')
-                                            ->label('Project')
-                                            ->getStateUsing(fn () => $reward?->project?->name ?? '—'),
-                                        TextEntry::make('initiated_by')
-                                            ->label('Initiated By')
-                                            ->getStateUsing(fn () => $reward?->initiatedBy?->name ?? '—'),
-                                        TextEntry::make('currency')
-                                            ->label('Currency')
-                                            ->getStateUsing(fn () => $reward?->currency?->code ?? '—'),
-                                        TextEntry::make('amount')
-                                            ->label('Amount')
-                                            ->getStateUsing(fn () => $reward?->amount)
-                                            ->numeric(decimalPlaces: 2),
-                                        TextEntry::make('status')
-                                            ->label('Status')
-                                            ->getStateUsing(fn () => $reward?->status->label() ?? '—')
-                                            ->badge()
-                                            ->color(fn () => $reward?->status instanceof RewardStatus ? $reward->status->color() : 'gray'),
-                                        TextEntry::make('payout_date')
-                                            ->label('Payout Date')
-                                            ->getStateUsing(fn () => $reward?->payout_date?->format('d M Y') ?? '—'),
-                                        TextEntry::make('notes')
-                                            ->label('Notes')
-                                            ->getStateUsing(fn () => $reward?->notes ?? '—')
-                                            ->columnSpanFull(),
-                                    ]),
-                                Section::make('This Recipient')
-                                    ->columns(3)
-                                    ->schema([
-                                        TextEntry::make('recipient_name')
-                                            ->label('Name')
-                                            ->getStateUsing(fn () => $record->payable->user?->name ?? $record->payable->name ?? '—'),
-                                        TextEntry::make('recipient_email')
-                                            ->label('Email')
-                                            ->getStateUsing(fn () => $record->payable->user?->email ?? $record->payable->email ?? '—'),
-                                        TextEntry::make('recipient_status')
-                                            ->label('Status')
-                                            ->getStateUsing(fn () => $record->payable->status->label())
-                                            ->badge()
-                                            ->color(fn () => $record->payable->status->color()),
-                                    ]),
-                                Section::make('All Recipients')
-                                    ->visible(fn () => $reward?->recipients->isNotEmpty())
-                                    ->schema([
-                                        RepeatableEntry::make('recipients')
-                                            ->hiddenLabel()
-                                            ->state(fn () => $reward?->recipients ?? collect())
-                                            ->schema([
-                                                TextEntry::make('name')
-                                                    ->label('Name')
-                                                    ->getStateUsing(fn ($record) => $record->user?->name ?? $record->name ?? '—'),
-                                                TextEntry::make('email')
-                                                    ->label('Email')
-                                                    ->getStateUsing(fn ($record) => $record->user?->email ?? $record->email ?? '—'),
-                                                TextEntry::make('status')
-                                                    ->label('Status')
-                                                    ->formatStateUsing(fn (RecipientStatus $state) => $state->label())
-                                                    ->badge()
-                                                    ->color(fn (RecipientStatus $state) => $state->color()),
-                                            ])
-                                            ->columns(3)
-                                            ->columnSpanFull(),
-                                    ]),
-                                Section::make('Attachments')
-                                    ->visible(fn () => $reward?->attachments->isNotEmpty())
-                                    ->schema([
-                                        RepeatableEntry::make('attachments')
-                                            ->hiddenLabel()
-                                            ->state(fn () => $reward?->attachments ?? collect())
-                                            ->schema([
-                                                TextEntry::make('original_name')
-                                                    ->label('File')
-                                                    ->url(fn ($record) => Storage::url($record->path))
-                                                    ->openUrlInNewTab(),
-                                            ])
-                                            ->columnSpanFull(),
-                                    ]),
-                            ];
-                        }
-
-                        return [
-                            Section::make()->schema([
-                                TextEntry::make('notice')
-                                    ->hiddenLabel()
-                                    ->getStateUsing(fn () => 'No details available.'),
-                            ]),
-                        ];
-                    })
+                    ->infolist(fn (PendingPayment $record): array => self::detailsInfolist($record))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close')
                     ->slideOver(),
