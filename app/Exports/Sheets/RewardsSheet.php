@@ -2,6 +2,7 @@
 
 namespace App\Exports\Sheets;
 
+use App\Enums\PaymentStatus;
 use App\Models\PendingPayment;
 use App\Models\RewardRecipient;
 use Illuminate\Database\Eloquent\Builder;
@@ -133,7 +134,11 @@ class RewardsSheet implements FromCollection, WithColumnWidths, WithHeadings, Wi
             $query->whereHasMorph('payable', [RewardRecipient::class], fn ($q) => $q->whereHas('reward', fn ($rq) => $rq->where('project_id', $this->filters['project_id'])));
         }
         if (! empty($this->filters['status'])) {
-            $query->whereHasMorph('payable', [RewardRecipient::class], fn ($q) => $q->whereHas('reward', fn ($rq) => $rq->where('status', $this->filters['status'])));
+            if ($this->filters['status'] === 'unpaid') {
+                $query->whereNot('status', PaymentStatus::Paid->value);
+            } else {
+                $query->whereHasMorph('payable', [RewardRecipient::class], fn ($q) => $q->whereHas('reward', fn ($rq) => $rq->where('status', $this->filters['status'])));
+            }
         }
         if (! empty($this->filters['payment_method_type'])) {
             $query->whereHas('paymentMethod', fn ($q) => $q->where('type', $this->filters['payment_method_type']));

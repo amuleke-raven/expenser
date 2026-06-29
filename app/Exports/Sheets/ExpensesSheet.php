@@ -2,6 +2,7 @@
 
 namespace App\Exports\Sheets;
 
+use App\Enums\PaymentStatus;
 use App\Models\Expense;
 use App\Models\PendingPayment;
 use Illuminate\Database\Eloquent\Builder;
@@ -185,7 +186,11 @@ class ExpensesSheet implements FromCollection, WithColumnWidths, WithEvents, Wit
             $query->where('currency_id', $this->filters['currency_id']);
         }
         if (! empty($this->filters['status'])) {
-            $query->whereHasMorph('payable', [Expense::class], fn ($q) => $q->where('status', $this->filters['status']));
+            if ($this->filters['status'] === 'unpaid') {
+                $query->whereNot('status', PaymentStatus::Paid->value);
+            } else {
+                $query->whereHasMorph('payable', [Expense::class], fn ($q) => $q->where('status', $this->filters['status']));
+            }
         }
         if (! empty($this->filters['project_id'])) {
             $query->whereHasMorph('payable', [Expense::class], fn ($q) => $q->where('project_id', $this->filters['project_id']));

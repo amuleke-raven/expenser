@@ -70,7 +70,7 @@ class PaymentRunReportPage extends Page implements HasForms
 
         if ($this->filters['include_rewards'] ?? true) {
             $this->previewDisbursements = (new RewardsSheet($this->filters))->collection()->values()->toArray();
-            //dd($this->previewDisbursements);
+            // dd($this->previewDisbursements);
         }
 
         $this->showPreview = true;
@@ -123,7 +123,11 @@ class PaymentRunReportPage extends Page implements HasForms
                         ->nullable(),
                     Select::make('filters.status')
                         ->label('Status')
-                        ->options(['approved' => 'Approved', 'paid' => 'Paid'])
+                        ->options([
+                            'approved' => 'Approved',
+                            'unpaid' => 'Unpaid',
+                            'paid' => 'Paid',
+                        ])
                         ->default('approved'),
                     Toggle::make('filters.include_expenses')->label('Include Expenses')->default(true),
                     Toggle::make('filters.include_rewards')->label('Include Disbursements')->default(true),
