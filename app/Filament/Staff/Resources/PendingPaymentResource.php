@@ -130,6 +130,7 @@ class PendingPaymentResource extends Resource
 
             TextColumn::make('recipient_email')
                 ->label('Email')
+                ->toggleable(isToggledHiddenByDefault: true)
                 ->getStateUsing(function (PendingPayment $record): string {
                     if ($record->payment_source === PaymentSource::Expense) {
                         return $record->recipientUser?->email ?? '—';
@@ -420,6 +421,7 @@ class PendingPaymentResource extends Resource
 
                 TextColumn::make('status')
                     ->badge()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->color(fn (PaymentStatus $state): string => $state->color()),
 
                 TextColumn::make('processedBy.name')
