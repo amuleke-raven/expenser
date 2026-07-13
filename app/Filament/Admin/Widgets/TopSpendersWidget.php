@@ -19,6 +19,7 @@ class TopSpendersWidget extends BaseWidget
         return $table
             ->query(
                 User::query()
+                    ->with('currency')
                     ->withCount(['expenses as expense_count' => fn (Builder $q) => $q->whereMonth('created_at', now()->month),
                     ])
                     ->withSum(['expenses as expense_total' => fn (Builder $q) => $q->whereMonth('created_at', now()->month),
@@ -30,7 +31,9 @@ class TopSpendersWidget extends BaseWidget
             ->columns([
                 TextColumn::make('name'),
                 TextColumn::make('expense_count')->label('Count'),
-                TextColumn::make('expense_total')->label('Total')->money(),
+                TextColumn::make('expense_total')
+                    ->label('Total')
+                    ->formatStateUsing(fn ($state, User $record): string => ($record->currency?->symbol ?? '$').number_format((float) $state, 2)),
             ]);
     }
 }
