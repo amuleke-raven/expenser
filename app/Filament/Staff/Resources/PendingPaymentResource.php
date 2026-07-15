@@ -61,6 +61,8 @@ class PendingPaymentResource extends Resource
     public static function eagerLoadRelations(Builder $query): Builder
     {
         return $query->with([
+            'currency',
+            'paymentMethod',
             'recipientUser',
             'rewardRecipient.user',
             'payable' => fn (MorphTo $morphTo) => $morphTo->morphWith([

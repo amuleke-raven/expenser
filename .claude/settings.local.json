@@ -3,7 +3,14 @@
     "allow": [
       "Bash(grep -nE 'initiated_by|protected \\\\$fillable|fillable|casts|public function' app/Models/Reward.php)",
       "Bash(vendor/bin/pint --dirty --format agent)",
-      "Bash(php artisan *)"
+      "Bash(php artisan *)",
+      "Bash(echo \"--- exit: $? ---\")",
+      "Bash(ps -eo user,comm)",
+      "Bash(env)",
+      "Bash(php -r 'var_dump\\(getenv\\(\"DB_USERNAME\"\\)\\);')",
+      "Bash(git check-ignore *)",
+      "Bash(curl -s -o /tmp/claude-0/-opt-sandbox-expenser/c69b5c27-b8c1-435e-b330-d8ff6e99f7dc/scratchpad/r4.html -w \"%{http_code}\\\\n\" http://127.0.0.1:84/)",
+      "Bash(curl -s -o /tmp/claude-0/-opt-sandbox-expenser/c69b5c27-b8c1-435e-b330-d8ff6e99f7dc/scratchpad/r5.html -w \"%{http_code}\\\\n\" -L http://127.0.0.1:84/admin)"
     ]
   },
   "enableAllProjectMcpServers": true,
