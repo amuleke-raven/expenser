@@ -82,6 +82,7 @@ class PendingPaymentResource extends Resource
         return [
             TextColumn::make('payable_type')
                 ->label('Type')
+                ->toggleable(isToggledHiddenByDefault: true)
                 ->badge()
                 ->formatStateUsing(fn ($state) => match ($state) {
                     Expense::class => 'Expense',
@@ -96,6 +97,7 @@ class PendingPaymentResource extends Resource
 
             TextColumn::make('ref')
                 ->label('Ref')
+                ->toggleable(isToggledHiddenByDefault: false)
                 ->getStateUsing(fn (PendingPayment $record): string => match (true) {
                     $record->payable instanceof Expense => $record->payable->ref(),
                     $record->payable instanceof RewardRecipient => $record->payable->reward?->ref() ?? '—',
@@ -104,6 +106,7 @@ class PendingPaymentResource extends Resource
 
             TextColumn::make('recipient_name')
                 ->label('Recipient')
+                ->toggleable(isToggledHiddenByDefault: false)
                 ->getStateUsing(function (PendingPayment $record): string {
                     if ($record->payment_source === PaymentSource::Expense) {
                         return $record->recipientUser?->name ?? '—';
@@ -144,6 +147,7 @@ class PendingPaymentResource extends Resource
                 }),
             TextColumn::make('requester_name')
                 ->label('Requester')
+                ->toggleable(isToggledHiddenByDefault: false)
                 ->getStateUsing(function (PendingPayment $record): string {
                     if ($record->payable instanceof Expense) {
                         return $record->payable->user?->name ?? '—';
@@ -158,6 +162,7 @@ class PendingPaymentResource extends Resource
 
             TextColumn::make('disbursement_type')
                 ->label('Disbursement Type')
+                ->toggleable(isToggledHiddenByDefault: false)
                 ->getStateUsing(function (PendingPayment $record): string {
                     if ($record->payable instanceof Expense) {
                         return $record->payable->expenseType?->name ?? '—';
@@ -186,16 +191,17 @@ class PendingPaymentResource extends Resource
                 }),
 
             TextColumn::make('date_requested')
+                ->toggleable(isToggledHiddenByDefault: true)
                 ->label('Date Requested')
                 ->getStateUsing(function (PendingPayment $record): string {
                     if ($record->payable instanceof Expense) {
                         $date = $record->payable->submitted_at ?? $record->payable->created_at;
 
-                        return $date?->format('M j, Y') ?? '—';
+                        return $date?->format('Y-m-d') ?? '—';
                     }
 
                     if ($record->payable instanceof RewardRecipient) {
-                        return $record->payable->reward?->created_at?->format('M j, Y') ?? '—';
+                        return $record->payable->reward?->created_at?->format('Y-m-d') ?? '—';
                     }
 
                     return '—';
@@ -215,6 +221,7 @@ class PendingPaymentResource extends Resource
 
             TextColumn::make('payment_method_display')
                 ->label('Payment Method')
+                ->toggleable(isToggledHiddenByDefault: true)
                 ->getStateUsing(fn (PendingPayment $record): string => $record->paymentMethod?->name
                     ?? $record->manual_payment_details
                     ?? '—'

@@ -9,6 +9,7 @@ use App\Models\Expense;
 use App\Models\ExpenseType;
 use App\Services\ExpenseRuleEngine;
 use App\Services\WorkflowEngine;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -16,8 +17,8 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Select;
 // use Filament\Forms\Components\Repeater\TableColumn;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -73,6 +74,22 @@ class ExpenseResource extends Resource
                         ->required()
                         ->searchable()
                         ->live()
+                        ->rules([
+                            fn (?Expense $record): Closure => function (string $attribute, $value, Closure $fail) use ($record): void {
+                                $date = $record?->created_at ?? now();
+
+                                $alreadyExists = Expense::query()
+                                    ->where('user_id', auth()->id())
+                                    ->where('expense_type_id', $value)
+                                    ->whereDate('created_at', $date)
+                                    ->when($record, fn (Builder $query): Builder => $query->whereKeyNot($record->getKey()))
+                                    ->exists();
+
+                                if ($alreadyExists) {
+                                    $fail('You have already created an expense of this type on this date. Please finalize or delete the existing expense before creating a new one.');
+                                }
+                            },
+                        ])
                         ->afterStateUpdated(function ($state, Set $set) {
                             // Reset attachment requirement when type changes
                         }),

@@ -80,10 +80,8 @@ class AccountingReviewResource extends Resource
      *
      * @return array<int, Section>
      */
-    public static function detailsInfolist(WorkflowStepAction $record): array
+    public static function detailsInfolist(Expense|Reward|null $subject): array
     {
-        $subject = $record->modelHasWorkflow?->workflowable;
-
         if ($subject instanceof Expense) {
             return [
                 Section::make('Expense Details')
@@ -292,7 +290,7 @@ class AccountingReviewResource extends Resource
                     ->label('View Details')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
-                    ->infolist(fn (WorkflowStepAction $record): array => self::detailsInfolist($record))
+                    ->infolist(fn (WorkflowStepAction $record): array => self::detailsInfolist($record->modelHasWorkflow?->workflowable))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close')
                     ->slideOver(),
