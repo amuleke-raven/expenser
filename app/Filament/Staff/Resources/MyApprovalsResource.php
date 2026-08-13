@@ -227,8 +227,8 @@ class MyApprovalsResource extends Resource
                                     ->schema([
                                         TextEntry::make('description')->label('Description'),
                                         TextEntry::make('quantity')->numeric(decimalPlaces: 2),
-                                        TextEntry::make('unit_price')->money()->label('Unit Price'),
-                                        TextEntry::make('total')->money(),
+                                        TextEntry::make('unit_price')->money(fn () => $record->modelHasWorkflow->workflowable->currency?->code ?? 'USD')->label('Unit Price'),
+                                        TextEntry::make('total')->money(fn () => $record->modelHasWorkflow->workflowable->currency?->code ?? 'USD'),
                                     ])
                                     ->columns(4)
                                     ->columnSpanFull(),
