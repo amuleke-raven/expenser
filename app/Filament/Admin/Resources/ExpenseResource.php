@@ -207,8 +207,16 @@ class ExpenseResource extends Resource
             ->columns([
                 TextColumn::make('ref')
                     ->label('Ref')
-                    ->searchable(query: fn ($query, $search) => $query->whereRaw("CONCAT('EXP-', LPAD(id::text, 5, '0')) ILIKE ?", ["%{$search}%"])
-                    ),
+                    ->searchable(query: function ($query, string $search) {
+                        $prefix = config('remoteraven.expense_ref_prefix').'-';
+                        $padLength = (int) config('remoteraven.ref_pad_length');
+
+                        $refExpression = $query->getConnection()->getDriverName() === 'sqlite'
+                            ? "? || printf('%0{$padLength}d', id)"
+                            : "CONCAT(?, LPAD(id, {$padLength}, '0'))";
+
+                        return $query->whereRaw("{$refExpression} LIKE ?", [$prefix, "%{$search}%"]);
+                    }),
 
                 TextColumn::make('user.name')
                     ->label('Staff')

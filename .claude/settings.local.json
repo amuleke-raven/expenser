@@ -10,7 +10,8 @@
       "Bash(php -r 'var_dump\\(getenv\\(\"DB_USERNAME\"\\)\\);')",
       "Bash(git check-ignore *)",
       "Bash(curl -s -o /tmp/claude-0/-opt-sandbox-expenser/c69b5c27-b8c1-435e-b330-d8ff6e99f7dc/scratchpad/r4.html -w \"%{http_code}\\\\n\" http://127.0.0.1:84/)",
-      "Bash(curl -s -o /tmp/claude-0/-opt-sandbox-expenser/c69b5c27-b8c1-435e-b330-d8ff6e99f7dc/scratchpad/r5.html -w \"%{http_code}\\\\n\" -L http://127.0.0.1:84/admin)"
+      "Bash(curl -s -o /tmp/claude-0/-opt-sandbox-expenser/c69b5c27-b8c1-435e-b330-d8ff6e99f7dc/scratchpad/r5.html -w \"%{http_code}\\\\n\" -L http://127.0.0.1:84/admin)",
+      "Bash(grep -rniE '$table->[a-zA-Z]+\\\\\\('\\\\''\\(rank|groups|lag|lead|system|recursive|lateral|empty|row_number|cume_dist|percent_rank|ntile|json_table|first_value|last_value|dense_rank|nth_value|window|over\\)'\\\\''' database/migrations/)"
     ]
   },
   "enableAllProjectMcpServers": true,

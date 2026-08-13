@@ -37,7 +37,15 @@ return new class extends Migration
         });
 
         Schema::table('pending_payments', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
+            // The 2026_03_31 migration recreated this table as `pending_payments_new` (SQLite
+            // workaround) before renaming it, so MySQL/MariaDB kept the old constraint name.
+            // SQLite has no named constraints and requires the column form instead.
+            if (DB::connection()->getDriverName() === 'sqlite') {
+                $table->dropForeign(['user_id']);
+            } else {
+                $table->dropForeign('pending_payments_new_user_id_foreign');
+            }
+
             $table->dropColumn('user_id');
         });
     }

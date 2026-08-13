@@ -55,7 +55,7 @@ class PendingPaymentResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->whereIn('status', [PaymentStatus::Pending, PaymentStatus::Processing, PaymentStatus::Failed]);
+            ->whereIn('pending_payments.status', [PaymentStatus::Pending, PaymentStatus::Processing, PaymentStatus::Failed]);
     }
 
     public static function eagerLoadRelations(Builder $query): Builder
@@ -420,7 +420,7 @@ class PendingPaymentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('created_at', 'desc')
+            ->defaultSort('pending_payments.created_at', 'desc')
             ->currentSelectionLivewireProperty('selectedTableRecordIds')
             ->checkIfRecordIsSelectableUsing(fn (PendingPayment $record): bool => in_array($record->status, [PaymentStatus::Pending, PaymentStatus::Processing]))
             ->modifyQueryUsing(fn (Builder $query) => self::eagerLoadRelations($query))
@@ -443,6 +443,7 @@ class PendingPaymentResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('status')
+                    ->column('pending_payments.status')
                     ->options(collect(PaymentStatus::cases())
                         ->reject(fn (PaymentStatus $case) => $case === PaymentStatus::Paid)
                         ->mapWithKeys(fn ($case) => [$case->value => $case->label()])
@@ -490,8 +491,8 @@ class PendingPaymentResource extends Resource
                         DatePicker::make('created_until'),
                     ])
                     ->query(fn ($query, array $data) => $query
-                        ->when($data['created_from'], fn ($q, $date) => $q->whereDate('created_at', '>=', $date))
-                        ->when($data['created_until'], fn ($q, $date) => $q->whereDate('created_at', '<=', $date))
+                        ->when($data['created_from'], fn ($q, $date) => $q->whereDate('pending_payments.created_at', '>=', $date))
+                        ->when($data['created_until'], fn ($q, $date) => $q->whereDate('pending_payments.created_at', '<=', $date))
                     ),
             ])
             ->actions([

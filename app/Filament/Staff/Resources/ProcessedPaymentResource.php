@@ -39,7 +39,7 @@ class ProcessedPaymentResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('status', PaymentStatus::Paid);
+        return parent::getEloquentQuery()->where('pending_payments.status', PaymentStatus::Paid);
     }
 
     public static function form(Schema $schema): Schema
